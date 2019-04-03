@@ -1,0 +1,376 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hta.peanuts.dao.UserDao">
+	<!-- 사용자 플래너 모두 불러오기 -->
+	<select id="getUserPlanners" parameterType="map" resultType="Planner">
+		select
+			p.plan_no as no,
+			p.user_id as userId,
+			p.plan_title as title,
+			p.plan_start as startDate,
+			p.plan_end as endDate,
+			p.plan_member as member,
+			p.create_date as createDate,
+			p.plan_status as status,
+			p.plan_open as open,
+			p.plan_hashtag as hashTag,
+			l.cnt as likeCnt
+		<include refid="type_sql"></include>		
+	</select>
+	<sql id="type_sql">
+		<if test="type == 'myPlan'">
+			from planner p,(SELECT NO, COUNT(NO) AS CNT
+							FROM LIKES
+							WHERE LIKES_CATEGORY = 'PLANNER'
+							GROUP BY NO) l
+			where p.plan_no = l.no(+)
+			and p.user_id = #{userId}
+			and p.plan_status in ('Y', 'N')
+			order by p.create_date desc
+		</if>
+		<if test="type == 'likePlan'">
+			from planner p, likes a, (SELECT NO, COUNT(NO) AS CNT
+									FROM LIKES
+									WHERE LIKES_CATEGORY = 'PLANNER'
+									GROUP BY NO) l
+			where p.plan_no = l.no(+)
+			and p.plan_no = a.no
+			and a.user_id = #{userId}
+			and a.likes_category = 'PLANNER'
+			and p.plan_status in ('Y', 'N')
+			and p.plan_open = 'Y'
+			order by p.create_date desc
+		</if>
+	</sql>
+	<!-- 관심플래너 좋아요 삭제 -->
+	<delete id="delLikePlanner" parameterType="map">
+		DELETE
+		FROM likes
+		WHERE no = #{pno}
+		and user_id = #{userId}
+	</delete>
+	<!-- 관심플래너 개수 -->
+	<select id="getUserLikePlan" parameterType="string" resultType="string">
+		select sum(cnt)
+		from planner p, (SELECT no, COUNT(NO) AS CNT
+							FROM LIKES
+							WHERE LIKES_CATEGORY = 'PLANNER'
+							and user_id = #{value}
+							GROUP BY no) l
+		where p.plan_no = l.no
+		and p.PLAN_STATUS in ('Y', 'N')
+		and p.PLAN_OPEN = 'Y'
+	</select>
+	<!-- 사용자 플래너 개수 -->
+	<select id="getUserPlanner" parameterType="string" resultType="int">
+		select count(*)
+		from PLANNER
+		where user_id = #{value}
+		and PLAN_STATUS in ('Y', 'N')
+	</select>
+	<!-- 플래너 삭제 -->
+	<update id="delPlanner" parameterType="int">
+		update planner
+		set plan_status = 'D'
+		where plan_no = #{value}
+	</update>
+	<!-- 플래너 공개여부 -->
+ 	<update id="OpenStatus" parameterType="map">
+ 		UPDATE planner
+			SET PLAN_OPEN = #{openStatus}
+		WHERE plan_no = #{planNo}
+	</update>
+	<!-- 관심플래너 추가 -->
+	<insert id="addPlanLike" parameterType="map">
+		insert into likes (no, user_id, likes_category)
+		values (#{pno}, #{id}, 'PLANNER')
+	</insert>
+	<!-- 플래너 관심 추가 여부 -->
+	<select id="getUserIdLike" parameterType="map" resultType="int">
+		SELECT count(*)
+		FROM likes
+		WHERE no = #{pno}
+		and likes_category = 'PLANNER'
+		and user_id = #{id}
+	</select>
+	
+	
+	
+
+	<insert id="addUser" parameterType="User">
+		insert into planner_user (user_id, user_pwd, user_name, user_status, user_email, user_tel, user_profile, create_date)
+		 values ( '${id}', '${pwd}', '${name}', 'IN', '${email}', '${tel}', '${profile}', sysdate)
+	</insert>
+	
+	<select id="getUserDetail" parameterType="string" resultType="User">
+		select 	
+			user_id id,
+			user_pwd pwd,
+			user_name name,
+			user_status status,
+			user_email email,
+			user_tel tel,
+			user_profile profile,
+			create_date createDate,
+			user_peanuts peanuts
+		from 
+			planner_user
+		where 
+			user_id = #{value}
+	</select>
+	
+	<!-- 사용자 사진 변경 -->
+	<update id="imgModify" parameterType="User">
+		update planner_user
+		set user_profile = #{profile}
+		where user_id = #{id}
+	</update>
+	
+	<select id="getMessages" parameterType="Message" resultType="Message">
+		select
+			user_id			as userId
+		,	msg_contents	as contents
+		,	msg_status		as status
+		,	create_date		as createDate
+		,	msg_key			as msgKey
+		,	msg_mark		as mark
+		from
+			message
+		where
+			msg_receiver = #{receiver}
+		<if test="criteria != null">
+			<if test="criteria == 'all'">
+				and msg_status in ('Y', 'N')
+			</if>	
+			<if test="criteria == 'mark'">
+				and msg_mark = 'Y'
+			</if>
+			<if test="criteria == 'mark'">
+				and msg_status in ('Y', 'N')
+			</if>
+			<if test="criteria == 'unread'">
+				and msg_status = 'N'
+			</if>
+			<if test="criteria == 'read'">
+				and msg_status = 'Y'
+			</if>
+		</if>
+		order by
+			create_date desc		
+	</select>
+	
+	<select id="getSentMessages" parameterType="string" resultType="Message">
+		select
+			user_id			as userId
+		,	msg_contents	as contents
+		,	msg_receiver	as receiver
+		,	msg_status		as status
+		,	create_date		as createDate
+		,	msg_read		as readDate
+		,	msg_key			as msgKey
+		from
+			message
+		where
+			user_id = #{value} 
+		and
+			msg_status in ('Y', 'N')
+		order by
+			create_date desc	
+	</select>
+	
+	<select id="getDelMessages" parameterType="string" resultType="Message">
+		select
+			user_id			as userId
+		,	msg_contents	as contents
+		,	msg_del			as delDate
+		,	msg_status		as status
+		,	msg_read		as readDate
+		,	create_date		as createDate		
+		,	msg_key			as msgKey
+		from
+			message
+		where
+			msg_receiver = #{value}
+		and
+			msg_status = 'D'
+		and
+			msg_del >= add_months(sysdate, -1)
+		order by
+			msg_del desc		
+	</select>
+	
+	<select id="getMessage" parameterType="int" resultType="Message">
+		select
+			user_id 		as userId
+		,	msg_contents 	as contents
+		,	msg_receiver	as receiver
+		,	create_date		as createDate
+		,	msg_mark		as mark
+		from
+			message
+		where	
+			msg_key = #{value}		
+	</select>
+	
+	<update id="delMessages" parameterType="int">
+		update message
+		set
+			msg_status = 'D',
+			msg_del = sysdate
+		where
+			msg_key = #{value}
+	</update>
+	
+	<update id="markMessage" parameterType="map">
+		update message
+		<set>
+			<if test="mark != null">
+				msg_mark = #{mark}
+			</if>
+		</set>
+		where
+			msg_key = #{key}	
+	</update>
+	
+	<delete id="cancelSendMessage" parameterType="int">
+		delete from message
+		where msg_key = #{value}
+	</delete>
+	
+	<update id="recoveryMessage" parameterType="map">
+		update message
+		set
+			msg_status = #{read}
+		where
+			msg_key = #{key}
+	</update>
+	
+	<insert id="sendMessages" parameterType="Message">
+		insert into message
+			(user_id, msg_contents, msg_receiver, msg_key)
+		values
+			(#{userId}, #{contents}, #{receiver}, message_seq.nextval)
+	</insert>
+	
+	<select id="getMessageRD" parameterType="map" resultType="MessageUser">
+		select
+			M.user_id		as id
+		,	M.msg_contents	as contents
+		,	M.create_date	as createDate
+		,	M.msg_status	as status
+		,	M.msg_key		as msgKey
+		,	U.user_profile	as profile
+		from
+			message M
+		,	planner_user U	
+		where
+			M.msg_key = #{key}
+		and
+			M.user_id = U.user_id
+		and
+			M.msg_receiver = #{id} 
+	</select>
+	
+	<select id="getMessageS" parameterType="map" resultType="MessageUser">
+		select
+			M.msg_contents	as contents
+		,	M.msg_receiver	as id
+		,	M.create_date	as createDate
+		,	M.msg_status	as status		
+		,	M.msg_key		as msgKey
+		,	U.user_profile	as profile
+		from
+			message M
+		,	planner_user U	
+		where
+			M.msg_key = #{key}
+		and
+			M.msg_receiver = U.user_id
+		and
+			M.user_id = #{id} 
+	</select>
+
+	<update id="readMessage" parameterType="int">
+		update message
+		set
+			msg_status = 'Y',
+			msg_read = sysdate
+		where
+			msg_key = #{value}
+	</update>
+	
+	<select id="getAlbumByPno" parameterType="int" resultType="Images">
+		select
+			no					as "no"
+			,images_category	as "category"
+			,images_name		as name
+		from images
+		where 
+			no = #{value}
+		and
+			images_category = 'PLANNER'
+	</select>
+	
+	<insert id="addPhoto" parameterType="Images">
+		insert into images(no, images_category, images_name)
+		values (#{no}, #{category}, #{name})
+	</insert>
+	
+	<delete id="delPhoto" parameterType="map">
+		delete from images
+		where
+			images_category = 'PLANNER'
+		and
+			no = #{planNo}
+		and
+			images_name = #{name}
+	</delete>
+	
+	<select id="getPlanByPno" parameterType="int" resultType="Planner">
+		select
+			plan_no			as no
+			,	user_id		as userId
+			,	plan_title	as title
+			,	to_char(plan_start, 'yyyy-mm-dd')	as startDate
+			,	to_char(plan_end, 'yyyy-mm-dd')		as endDate
+			,	plan_member	as member
+			,	create_date	as createDate
+			,	plan_status	as status
+			,	plan_open	as open
+			,	plan_hashtag	as hashTag
+		from
+			planner
+		where
+			plan_no = #{value}
+	</select>
+	
+	<update id="updateUserById" parameterType="User">
+		update planner_user
+		set
+			user_pwd = #{pwd},
+			user_tel = #{tel},
+			user_email = #{email}
+		where
+			user_id = #{id}
+	</update>
+	
+	<update id="outPutUserById" parameterType="string">
+		update planner_user
+		set
+			user_status = 'OUT'
+		where
+			user_id = #{value}
+	</update>
+	
+	<update id="addPeanut" parameterType="hashmap">
+		update planner_user
+		set
+			user_peanuts = #{peanuts}
+		where
+			user_id = #{userId}
+	</update>
+
+</mapper>

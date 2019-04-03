@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hta.peanuts.dao.WeatherDao">
+
+	<select id="getWetherLocationsByPlannerNo" parameterType="int" resultType="Location">
+		select
+			location_id			as id,
+			location_code		as code,
+			location_city		as city,
+			location_name		as name,
+			line_x				as lineX, 
+			line_y				as lineY,
+			location_weather	as weatherId
+		from	
+			locations
+		where 
+			location_id in (select location_id 
+							  from planner_location 
+							  where PLAN_NO = #{value})
+	</select>
+
+	<select id="searchLocationByCity" parameterType="string" resultType="Location">
+		select
+			location_id			as id,
+			location_code		as code,
+			location_city		as city,
+			location_name		as name,
+			line_x				as lineX, 
+			line_y				as lineY,
+			location_weather	as weatherId
+		from	
+			locations
+		where
+			location_city = #{value}
+		order by
+			location_name 
+	</select>
+	
+	<select id="searchLocationById" parameterType="string" resultType="Location">
+		select
+			location_id			as id,
+			location_code		as code,
+			location_city		as city,
+			location_name		as name,
+			line_x				as lineX, 
+			line_y				as lineY,
+			location_weather	as weatherId
+		from	
+			locations
+		where
+			location_id = #{value}
+		order by
+			location_name 
+					
+	</select>
+	
+	<!-- dashboard용 작년 데이터-->
+	<select id="getLoadMonth" parameterType="int" resultType="date">
+		select
+			plan_start
+		from
+			planner
+		where
+			plan_no = #{value}	
+	</select>
+</mapper>
+
+
+
+

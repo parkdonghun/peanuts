@@ -1,0 +1,355 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hta.peanuts.dao.ScheduleDao">
+	
+	<select id="getPlannerStatus" parameterType="int" resultType="string">
+		select
+			plan_status
+		from
+			planner
+		where
+			plan_no = #{value}
+	</select>
+	
+	<select id="getPlanner" parameterType="int" resultType="Planner">
+		select
+			P.plan_no		as no
+		,	P.user_id		as userId
+		,	P.plan_title	as title
+		,	P.plan_start	as startDate
+		,	P.plan_end		as endDate
+		,	P.plan_member	as member
+		,	P.create_date	as createDate
+		from
+			planner P
+		,	planner_daily D
+		where
+			P.plan_no = D.plan_no
+		and
+			D.daily_key = #{value}		
+	</select>
+	
+	<select id="dailyByPlanNo" parameterType="int" resultType="Daily">
+		select
+			plan_no		as planNo
+		,	daily_key	as "key"
+		,	daily_index	as "index"
+		,	daily_date	as "date" 
+		from
+			planner_daily
+		where
+			plan_no = #{value}
+		order by
+			daily_index asc		
+	</select>
+	
+	<select id="dailyByKey" parameterType="int" resultType="date">
+		select
+			daily_date 
+		from
+			planner_daily
+		where
+			daily_key = #{value}
+	</select>
+	
+	<select id="transByDaily" parameterType="int" resultType="TransLocation">
+		select
+			T.daily_key			as "key"
+		,	T.trans_key			as transKey
+		,	T.trans_category	as category
+		,	L.location_name		as startLocation
+		,	L.location_id		as startlocationId
+		,	T.start_time		as startTime
+		,	C.location_name		as endLocation
+		,	C.location_id		as endlocationId
+		,	T.end_time			as endTime
+		,	T.trans_memo		as memo
+		,	T.create_date		as createDate
+		from
+			transportation T
+		,	locations L
+		,	locations C
+		where
+			T.start_location = L.location_id
+		and
+			T.end_location = C.location_id
+		and
+			T.daily_key = #{value}	
+		order by
+			T.create_date asc
+	</select>
+	
+	<select id="locationByDaily" parameterType="map" resultType="PlannerLocation">
+		select
+				P.plan_no		as planNo
+			,	P.start_date	as startDate
+			,	P.end_date		as endDate
+			,	P.create_date	as createDate
+			,	P.location_id	as locationId
+			,	L.location_code	as locationCode
+			,	L.location_name	as locationName
+			from
+				planner_location P
+			,	Locations L
+			where
+				P.location_id = L.location_id
+			and
+				TO_DATE(TO_CHAR(#{day}, 'YYYY-MM-DD'),'YYYY-MM-DD') &gt;= P.start_date
+			and
+				TO_DATE(TO_CHAR(#{day}, 'YYYY-MM-DD'),'YYYY-MM-DD') &lt;= P.end_date
+			and
+				P.plan_no = #{pno}
+			order by
+				P.create_date asc
+	</select>
+	
+	<select id="getCities" parameterType="int" resultType="PlannerLocation">
+		select
+				P.plan_no		as planNo
+			,	P.start_date	as startDate
+			,	P.end_date		as endDate
+			,	P.create_date	as createDate
+			,	P.location_id	as locationId
+			,	L.location_code	as locationCode
+			,	L.location_name	as locationName
+			from
+				planner_location P
+			,	Locations L
+			where
+				P.location_id = L.location_id
+			and
+				P.plan_no = #{value}
+			order by
+				P.create_date asc		
+	</select>
+	
+	<select id="tourByDaily" parameterType="int" resultType="DailyTour">
+		select
+			daily_key		as "key"
+		,	tour_title		as title
+		,	create_date		as createDate
+		,	tour_key		as tourKey
+		from
+			daily_tour
+		where
+			daily_key = #{value}
+		order by
+			create_date asc			
+	</select>
+	
+	<select id="hotelByDaily" parameterType="int" resultType="DailyHotel">
+		select
+			daily_key		as "key"
+		,	hotel_title		as title
+		,	hotel_term		as term
+		,	create_date		as createDate
+		,	hotel_key		as hotelKey
+		from
+			daily_hotel
+		where
+			daily_key = #{value}
+		order by
+			create_date asc			
+	</select>
+	
+	<delete id="delTransByTkey" parameterType="int">
+		delete from transportation
+		where trans_key = #{value}
+	</delete>
+	
+	<delete id="delWalletTransByTkey" parameterType="int">
+		delete from planner_wallet
+		where wallet_frg_key = #{value}
+	</delete>
+	
+	<select id="getTrans" parameterType="int" resultType="TransLocation">
+		select
+			T.daily_key			as "key"
+		,	T.trans_key			as transKey
+		,	T.trans_category	as category
+		,	L.location_name		as startLocation
+		,	L.location_id		as startlocationId
+		,	T.start_time		as startTime
+		,	C.location_name		as endLocation
+		,	C.location_id		as endlocationId
+		,	T.end_time			as endTime
+		,	T.trans_memo		as memo
+		,	T.create_date		as createDate
+		from
+			transportation T
+		,	locations L
+		,	locations C
+		where
+			T.start_location = L.location_id
+		and
+			T.end_location = C.location_id
+		and
+			T.trans_key = #{value}		
+	</select>
+	
+	<update id="modifyTrans" parameterType="Transportation">
+		update transportation
+		set
+			trans_category = #{category}
+		,	start_location = #{startLocation}
+		,	start_time = #{startTime}
+		,	end_location = #{endLocation}
+		,	end_time = #{endTime}
+		,	trans_memo = #{memo}
+		where
+			trans_key = #{transKey}	
+	</update>
+	
+	<update id="modifyWalletTrans" parameterType="Wallet">
+		update planner_wallet
+		set
+			wallet_title = #{title}
+		where
+			wallet_frg_key = #{frgKey}
+	</update>
+	
+	<insert id="addTrans" parameterType="Transportation">
+		insert into transportation (daily_key, trans_category, start_location, start_time, end_location, end_time, trans_memo, trans_key)
+		values (#{key}, #{category}, #{startLocation}, #{startTime}, #{endLocation}, #{endTime}, #{memo}, #{transKey})
+	</insert>
+	
+	<insert id="addWalletTrans" parameterType="Wallet">
+		insert into planner_wallet (daily_key, wallet_category, wallet_title, wallet_key, wallet_frg_key)
+		values (#{daily}, 'TRANS', #{title}, wallet_seq.nextval, #{frgKey})	
+	</insert>
+	
+	<select id="getTransKey" resultType="int">
+		select trans_seq.nextval
+		from dual
+	</select>
+	
+	<insert id="addTour" parameterType="DailyTour">
+		insert into daily_tour (daily_key, tour_title, create_date, tour_key)
+		values (#{key}, #{title}, sysdate, #{tourKey})
+	</insert>
+	
+	<select id="getTourKey" resultType="int">
+		select tour_seq.nextval
+		from dual
+	</select>	
+	
+	<delete id="delTour" parameterType="int">
+		delete from daily_tour
+		where tour_key = #{value}
+	</delete>
+	
+	<insert id="addHotel" parameterType="DailyHotel">
+		insert into daily_hotel (daily_key, hotel_title, hotel_term, create_date, hotel_key)
+		values (#{key}, #{title}, #{term}, sysdate, #{hotelKey})
+	</insert>
+	
+	<insert id="addWalletHotel" parameterType="Wallet">
+		insert into planner_wallet (daily_key, wallet_category, create_date, wallet_title, wallet_key, wallet_frg_key)
+		values (#{daily}, 'HOTEL', sysdate, #{title}, wallet_seq.nextval, #{frgKey})
+	</insert>
+	
+	<select id="getHotelKey" resultType="int">
+		select hotel_seq.nextval
+		from dual
+	</select>
+	
+	<delete id="delHotel" parameterType="int">
+		delete from daily_hotel
+		where hotel_key = #{value}
+	</delete>
+	
+	<delete id="delWalletHotel" parameterType="int">
+		delete from planner_wallet
+		where wallet_frg_key = #{key}
+	</delete>
+	
+	<select id="getCalEvent" parameterType="int" resultType="PlannerLocation">
+		select
+				P.plan_no		as planNo
+			,	P.start_date	as startDate
+			,	P.end_date		as endDate
+			,	P.create_date	as createDate
+			,	P.location_id	as locationId
+			,	L.location_code	as locationCode
+			,	L.location_name	as locationName
+			from
+				planner_location P
+			,	Locations L
+			where
+				P.location_id = L.location_id
+			and
+				P.plan_no = #{value}
+			order by
+				P.create_date asc	
+	</select>
+	
+	<select id="getPlannerInfo" parameterType="int" resultType="Planner">
+		select
+			user_id								as userId
+		,	plan_title							as title
+		,	to_char(plan_start, 'yyyy-mm-dd')	as startDate
+		,	to_char(plan_end, 'yyyy-mm-dd')		as endDate
+		,	plan_member							as member
+		,	create_date							as createDate
+		,	plan_status							as status
+		from
+			planner
+		where
+			plan_no = #{value}	
+	</select>
+	
+	<select id="getUserInfo" parameterType="int" resultType="User">
+		select
+			U.user_id			as id
+		,	U.user_status		as status
+		,	U.user_profile		as profile
+		from
+			planner P
+		,	planner_user U
+		where
+			P.user_id = U.user_id
+		and
+			P.plan_no = #{value}	
+	</select>
+	
+	<select id="getPlannerLikes" parameterType="int" resultType="int">
+		select
+			count(*)
+		from
+			Planner P
+		,	Likes L
+		where
+			P.plan_no = L.no
+		and
+			L.likes_category = 'PLANNER'
+		and
+			P.plan_no = #{value}	
+	</select>
+	
+	<select id="getPlannerReply" parameterType="int" resultType="int">
+		select
+			count(*)
+		from
+			Planner P
+		,	Reply R
+		where
+			P.plan_no = R.no
+		and
+			R.rep_category = 'PLANNER'
+		and
+			P.plan_no = #{value}	
+	</select>
+	
+	<select id="getLoadMonth" parameterType="int" resultType="date">
+		select
+			plan_start
+		from
+			planner
+		where
+			plan_no = #{value}	
+	</select>
+	
+</mapper>

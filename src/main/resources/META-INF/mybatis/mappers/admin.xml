@@ -1,0 +1,631 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hta.peanuts.dao.AdminDao">
+
+	<!-- 공통 기능 -->
+	<!-- view 수를 높이는 기능 -->
+	<update id="plusView" parameterType="int">
+		update board
+		set
+			board_view = board_view+1
+		where
+			board_no = #{value} 
+	</update>
+	
+	<!-- no에 따른 댓글을 가져오는 기능 -->
+	<select id="getReplyByBoardNo" parameterType="int" resultType="Reply">
+		select
+			no					as boardNo
+			,	rep_no			as repNo
+			,	rep_category	as "category"
+			,	user_id			as userId
+			,	rep_contents	as "contents"
+			,	rep_status		as status
+			,	create_date		as createDate
+		from
+			reply
+		where
+			no = #{value}
+		order by
+			create_date desc
+	</select>
+	
+	<!-- category별 글 갯수를 알아내는 기능 -->
+	<select id="boardlistCnt" parameterType="string" resultType="int">
+		select count(*)
+		from board
+		where
+			board_category = #{value}
+		and
+			board_status = 'E'
+	</select>
+	
+	<!-- category별 boardList를 받아와서 저장하는 기능 -->
+	<!-- category, beginIndex, endIndex가 들어간 map 객체가 필요하다 -->
+	<select id="getBoardList" parameterType="map" resultType="BoardForm">
+		select 
+			board_no 			as "no"
+			,	user_id			as userId
+			,	board_category	as "category"
+			,	board_title		as title
+			,	board_contents	as "contents"
+			,	board_view		as "view"
+			,	create_date		as createDate
+			,	board_status	as status
+		from
+			(
+			select
+				board_no, user_id, board_category, board_title
+				, board_contents, board_view, create_date, board_status
+				, row_number() over (order by create_date desc) rn
+			from
+				board
+			where
+				board_category = #{category}
+			and
+				board_status = 'E'
+			order by
+				create_date desc
+			)
+		where
+			rn >= #{beginIndex}
+		and
+			rn &lt;= #{endIndex}
+		order by
+			create_date desc
+	</select>
+	
+	<!-- no에 따른 BoardDetail을 받아오는 기능 -->
+	<select id="getBoardByNo" parameterType="int" resultType="BoardForm">
+		select 
+			board_no 			as "no"
+			,	user_id			as userId
+			,	board_category	as "category"
+			,	board_title		as title
+			,	board_contents	as "contents"
+			,	board_view		as "view"
+			,	create_date		as createDate
+			,	board_status	as status
+		from
+			board
+		where
+			board_no = #{value}
+	</select>
+	
+	<!-- no에 따른 게시물을 지운다(status를 D로 업데이트한다) -->
+	<update id="delBoardByNo">
+		update board
+		set
+			board_status = 'D'
+		where
+			board_no = #{value}
+	</update>
+	
+	<!-- 키워드와 카테고리를 통해서 게시글을 검색하는 기능 -->
+	<select id="searchBoards" parameterType="map" resultType="BoardForm">
+		select 
+			board_no 			as "no"
+			,	user_id			as userId
+			,	board_category	as "category"
+			,	board_title		as title
+			,	board_contents	as "contents"
+			,	board_view		as "view"
+			,	create_date		as createDate
+			,	board_status	as status
+		from
+			board
+		where
+			board_category = #{category}
+		and
+		(
+			board_title like '%'||#{keyword}||'%'
+			or
+			board_contents like '%'||#{keyword}||'%'
+			or
+			user_id like '%'||#{keyword}||'%'
+		)
+		and
+			board_status = 'E'
+		order by
+			create_date desc
+	</select>
+	
+	<!-- userId를 이용해서 user정보를 불러오는 기능 -->
+	<select id="getUserByUserId" parameterType="string" resultType="User">
+		select
+			user_id				as id
+			,	user_pwd		as pwd
+			,	user_name		as name
+			,	user_status		as status
+			,	user_email		as email
+			,	user_tel		as tel
+			,	user_profile	as profile
+			,	create_date		as createDate
+			,	user_peanuts	as peanuts
+		from
+			planner_user
+		where
+			user_id = #{value}
+	</select>
+	
+	<!-- ////////////////////////////////////////////////////////////////////////////// -->
+	<!-- ////////////////////////////////////////////////////////////////////////////// -->
+	<!-- 회원관리에 관련된 기능 -->
+	<!-- 회원수를 알아내는 기능 -->
+	<select id="userCnt" resultType="int">
+		select count(*)
+		from planner_user
+	</select>
+	
+	<!-- 모든 회원 리스트를 가져오는 기능 -->
+	<select id="getUserList" parameterType="map" resultType="User">
+		select
+			user_id				as id
+			,	user_pwd		as pwd
+			,	user_name		as name
+			,	user_status		as status
+			,	user_email		as email
+			,	user_tel		as tel
+			,	user_profile	as profile
+			,	create_date		as createDate
+			,	user_peanuts	as peanuts
+		from
+			(
+			select
+				user_id, user_pwd, user_name, user_status, user_email
+				, user_tel, user_profile, create_date, user_peanuts
+				, row_number() over (order by create_date desc) rn
+			from
+				planner_user
+			order by
+				create_date desc
+			)
+		where
+			rn >= #{beginIndex}
+		and
+			rn &lt;= #{endIndex}
+		order by
+			create_date desc
+	</select>
+	
+	<!-- 신고 댓글을 검색해오는 기능 -->
+	<select id="getRepoCntById" parameterType="string" resultType="int">
+		select
+			nvl(count(*), 0)	as repoReplyCnt
+		from
+			reply
+		where 
+			rep_status in ('REPDEL', 'REPORT')
+		and
+			user_id = #{value}
+	</select>
+	
+	<!-- 유저를 검색하는 기능 -->
+	<select id="searchUser" parameterType="string" resultType="User">
+		select
+			user_id				as id
+			,	user_pwd		as pwd
+			,	user_name		as name
+			,	user_status		as status
+			,	user_email		as email
+			,	user_tel		as tel
+			,	user_profile	as profile
+			,	create_date		as createDate
+			,	user_peanuts	as peanuts
+		from
+			planner_user
+		where
+			(
+			user_id like '%'||#{value}||'%'
+			or
+			user_name like '%'||#{value}||'%'
+			)
+	</select>
+	
+	<!-- 유저의 땅콩 갯수를 조절하는 기능 -->
+	<update id="plusPeanuts" parameterType="map">
+		update planner_user
+		set
+			user_peanuts = user_peanuts + #{peanuts}
+		where
+			user_id = #{userId}
+	</update>
+	
+	<!-- 유저의 상태를 업데이트하는 기능 -->
+	<update id="updateUserStatusById" parameterType="map">
+		update planner_user
+		set
+			user_status = #{status}
+		where
+			user_id = #{userId}
+	</update>
+	
+	<!-- ////////////////////////////////////////////////////////////////////////////// -->
+	<!-- ////////////////////////////////////////////////////////////////////////////// -->
+	<!-- repoReply에 관련된 기능 -->
+	<!-- 신고된 댓글 갯수를 알아내는 기능 -->
+	<select id="repoCnt" resultType="int">
+		select count(*)
+		from reply
+		where
+			rep_status = 'REPORT'
+	</select>
+	
+	<!-- 신고댓글을 모두 가져오는 기능 -->
+	<select id="getRepoList" parameterType="map" resultType="Reply">
+		select
+			no					as boardNo
+			, 	rep_no			as repNo
+			, 	rep_category	as category
+			,	user_id			as userId
+			,	rep_contents	as contents
+			,	rep_status		as status
+			,	create_date		as createDate
+		from
+			(
+			select
+				no, rep_no, rep_category, user_id
+				, rep_contents, rep_status, create_date
+				, row_number() over (order by create_date desc) rn
+			from
+				reply
+			where
+				rep_status = 'REPORT'
+			order by
+				create_date desc
+			)
+		where
+			rn >= #{beginIndex}
+		and
+			rn &lt;= #{endIndex}
+		order by
+			create_date desc
+	</select>
+	
+	<!-- 신고댓글을 검색하는 기능 -->
+	<select id="searchRepo" parameterType="string" resultType="Reply">
+		select
+			no					as boardNo
+			, 	rep_no			as repNo
+			, 	rep_category	as category
+			,	user_id			as userId
+			,	rep_contents	as contents
+			,	rep_status		as status
+			,	create_date		as createDate
+		from
+			reply
+		where
+			rep_status = 'REPORT'
+		and
+		(
+			rep_contents like '%'||#{value}||'%'
+			or
+			user_id like '%'||#{value}||'%'
+			or
+			rep_category like '%'||#{value}||'%'
+		)
+		order by
+			create_date desc
+	</select>
+	
+	<!-- 신고댓글을 블라인드 처리하는 기능 -->
+	<update id="delRepoByNo" parameterType="int">
+		update reply
+		set
+			rep_status = 'REPDEL'
+		where
+			rep_no = #{value}
+	</update>
+	
+	<!-- 신고댓글의 신고를 취소하는 기능 -->
+	<update id="returnRepoByNo" parameterType="int">
+		update reply
+		set
+			rep_status = 'NORMAL'
+		where
+			rep_no = #{value}
+	</update>
+	
+	<!-- 신고댓글의 repNo를 통해서 신고 댓글의 전문을 가져오는 기능 -->
+	<select id="getRepoByRepNo" parameterType="int" resultType="Reply">
+		select 
+			no					as boardNo
+			, 	rep_no			as repNo
+			, 	rep_category	as category
+			,	user_id			as userId
+			,	rep_contents	as contents
+			,	rep_status		as status
+			,	create_date		as createDate
+		from
+			reply
+		where
+			rep_no = #{value}
+	</select>
+	
+	<!-- ////////////////////////////////////////////////////////////////////////////// -->
+	<!-- ////////////////////////////////////////////////////////////////////////////// -->
+	<!-- planner에 관련된 기능 -->
+	<!-- 등록된 planner의 갯수를 알아내는 기능 -->
+	<select id="planlistCnt" resultType="int">
+		select count(*)
+		from planner
+		where
+			plan_status in ('Y', 'N')
+	</select>
+	
+	<!-- 등록된 planner를 모두 불러오는 기능 -->
+	<!-- beginIndex, endIndex가 들어간 map 객체가 필요하다 -->
+	<select id="getPlanList" parameterType="map" resultType="Planner">
+		select
+			plan_no			as no
+			,	user_id		as userId
+			,	plan_title	as title
+			,	to_char(plan_start, 'yyyy-mm-dd')	as startDate
+			,	to_char(plan_end, 'yyyy-mm-dd')		as endDate
+			,	plan_member	as member
+			,	create_date	as createDate
+			,	plan_status	as status
+			,	plan_open	as open
+		from
+			(
+			select
+				plan_no, user_id, plan_title, plan_start
+				, plan_end, plan_member, create_date, plan_status, plan_open
+				, row_number() over (order by create_date desc) rn
+			from
+				planner
+			where
+				plan_status in ('Y', 'N')
+			order by
+				create_date desc
+			)
+		where
+			rn >= #{beginIndex}
+		and
+			rn &lt;= #{endIndex}
+		order by
+			create_date desc
+	</select>
+	
+	<!-- planner를 검색하는 기능 -->
+	<select id="searchPlan" parameterType="string" resultType="Planner">
+		select
+			plan_no			as no
+			,	user_id		as userId
+			,	plan_title	as title
+			,	to_char(plan_start, 'yyyy-mm-dd')	as startDate
+			,	to_char(plan_end, 'yyyy-mm-dd')		as endDate
+			,	plan_member	as member
+			,	create_date	as createDate
+			,	plan_status	as status
+			,	plan_open	as open
+		from
+			planner
+		where
+		(
+			plan_title like '%'||#{value}||'%'
+			or
+			user_id like '%'||#{value}||'%'
+		)
+		order by
+			create_date desc
+	</select>
+	
+	<!-- planner를 삭제하는 기능 -->
+	<update id="delPlanByNo" parameterType="int">
+		update planner
+		set
+			plan_status = 'D'
+		where
+			plan_no = #{value}
+	</update>
+	
+	<!-- planner_no를 이용해서 특정 플래너를 검색하는 기능 -->
+	
+	<!-- ////////////////////////////////////////////////////////////////////////////// -->
+	<!-- ////////////////////////////////////////////////////////////////////////////// -->
+	<!-- qna 관련 기능 -->
+	<!-- qna 게시판에 댓글을 추가하는 기능 -->
+	<insert id="answerQna" parameterType="Reply">
+		insert into reply
+			(no, rep_no, rep_category, user_id, rep_contents)
+		values
+			(#{boardNo}, reply_seq.nextval, 'QNA', #{userId}, #{contents})
+	</insert>
+	
+	<!-- qna 게시판의 댓글을 삭제하는 기능 -->
+	<delete id="delQnaReply" parameterType="int">
+		delete from reply
+		where rep_no = #{value}
+	</delete>
+	
+	<!-- qna 게시판의 댓글을 수정하는 기능 -->
+	<update id="updateQnaReply" parameterType="Reply">
+		update reply
+		set
+			rep_contents = #{contents}
+		where
+			rep_no = #{repNo}
+	</update>
+	
+	<!-- repNo를 통해서 댓글 정보를 불러오는 기능 -->
+	<select id="getReplyByRepNo" parameterType="int" resultType="Reply">
+		select
+			no					as boardNo
+			,	rep_no			as repNo
+			,	rep_category	as category
+			,	user_id			as userId
+			,	rep_contents	as contents
+			,	rep_status		as status
+			,	create_date		as createDate
+		from
+			reply
+		where
+			rep_no = #{value}	
+	</select>
+	
+	<!-- ////////////////////////////////////////////////////////////////////////////// -->
+	<!-- ////////////////////////////////////////////////////////////////////////////// -->
+	<!-- 광장게시판에 관련된 기능 -->
+	
+	<!-- ////////////////////////////////////////////////////////////////////////////// -->
+	<!-- ////////////////////////////////////////////////////////////////////////////// -->
+	<!-- 동행게시판에 관련된 기능 -->
+	<!-- 해당 게시글의 동행인수를 구한다 -->
+	<select id="getTogetherPersonCnt" parameterType="int" resultType="int">
+		select nvl(count(*), 0)
+		from together
+		where board_no = #{value}
+	</select>
+	
+	<!-- ////////////////////////////////////////////////////////////////////////////// -->
+	<!-- ////////////////////////////////////////////////////////////////////////////// -->
+	<!-- 티켓게시판에 관련된 기능 -->
+	
+	<!-- ////////////////////////////////////////////////////////////////////////////// -->
+	<!-- ////////////////////////////////////////////////////////////////////////////// -->
+	<!-- 업체게시판에 관련된 기능 -->
+	
+	<!-- ////////////////////////////////////////////////////////////////////////////// -->
+	<!-- ////////////////////////////////////////////////////////////////////////////// -->
+	<!-- admin main page에 관련된 기능 -->
+	<!-- 모든 여행일수 -->
+	<select id="totalDays" resultType="int">
+		select
+			sum(plan_end - plan_start + 1)	as cnt
+		from
+			planner
+	</select>
+	
+	<!-- 평균 여행일수 -->
+	<select id="totalDaysAvg" resultType="int">
+		select
+			round(avg(plan_end - plan_start + 1))	as avg
+		from
+			planner
+	</select>
+	
+	<!-- 보통 여행을 몇일정도 하나..? -->
+	<select id="totalNumOfTravelDays" parameterType="int" resultType="int">
+		select
+			count(*)	as cnt
+		from
+			planner
+		<where>
+			<if test="value == 10">
+				(plan_end - plan_start + 1) &lt; 10
+			</if>
+			<if test="value == 20">
+				(plan_end - plan_start + 1) >= 10
+				and
+				(plan_end - plan_start + 1) &lt; 20
+			</if>
+			<if test="value == 30">
+				(plan_end - plan_start + 1) >= 20
+				and
+				(plan_end - plan_start + 1) &lt; 30
+			</if>
+			<if test="value == 40">
+				(plan_end - plan_start + 1) >= 30
+			</if>
+		</where>
+	</select>
+	
+	<!-- 월별 여행일 수(total, 년도별) -->
+	<select id="totalDaysOfMonth" parameterType="string" resultType="AdminDashBoard">
+		select
+			to_char(daily_date, 'MM')	as "month"
+			, nvl(count(*), 0)			as cnt
+		from
+			planner_daily
+		<where>
+			<if test="value != null">
+				to_char(daily_date, 'yyyy') = #{value}
+			</if>
+		</where>
+		group by
+			to_char(daily_date, 'MM')
+		order by
+			"month"
+	</select>
+	
+	<!-- 여행객이 가장 많이 방문한 도시 -->
+	<select id="mostVisited" resultType="AdminDashBoard">
+		select
+			PL.location_id		as locationId
+			,	L.location_city	as locationCity
+			,	L.location_name	as locationName
+			,	L.line_x		as lineX
+			,	L.line_y		as lineY
+			,	PL.cnt			as cnt
+		from
+			(
+				select
+					location_id
+					, count(*) cnt
+				from 
+					planner_location
+				group by
+					location_id
+			) PL, locations L
+		where 
+			PL.location_id = L.location_id
+		order by
+			PL.cnt desc
+	</select>
+	
+	<!-- 여행객이 오래 머무른 도시(머무른 일수를 모두 더한 것) -->
+	<select id="haveStayedTotal" resultType="AdminDashBoard">
+		select
+			PL.location_id		as locationId
+			,	L.location_city	as locationCity
+			,	L.location_name	as locationName
+			,	L.line_x		as lineX
+			,	L.line_y		as lineY
+			,	PL.total_date	as "date"
+		from
+			(
+				select
+					location_id
+					, sum(end_date - start_date + 1) total_date
+				from 
+					planner_location
+				group by
+					location_id
+			) PL, locations L
+		where 
+			PL.location_id = L.location_id
+		order by
+			PL.total_date desc
+	</select>
+	
+	<!-- 여행객에 오래 머무른 도시(한번 방문 시 얼마나 머물렀는지 평균으로 나타냄), 평균 몇일을 머물렀나 -->
+	<select id="haveStayedAvg" resultType="AdminDashBoard">
+		select
+			PL.location_id		as locationId
+			,	L.location_city	as locationCity
+			,	L.location_name	as locationName
+			,	L.line_x		as lineX
+			,	L.line_y		as lineY
+			,	PL.avg_date		as "date"
+		from
+			(
+				select
+					location_id
+					, round(avg(end_date - start_date + 1)) avg_date
+				from 
+					planner_location
+				group by
+					location_id
+			) PL, locations L
+		where 
+			PL.location_id = L.location_id
+		order by
+			PL.avg_date desc
+	</select>
+	
+	
+</mapper>

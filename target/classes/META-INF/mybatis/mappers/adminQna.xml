@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hta.peanuts.dao.AdminQnaDao">
+
+	<!-- 모든 list를 받아와서 저장하는 기능 -->
+	<select id="getQnaList" parameterType="map" resultType="BoardForm">
+		select 
+			board_no 			as "no"
+			,	user_id			as userId
+			,	board_category	as "category"
+			,	board_title		as title
+			,	board_contents	as "contents"
+			,	board_view		as "view"
+			,	create_date		as createDate
+			,	board_status	as status
+		from
+			(
+			select
+				board_no, user_id, board_category, board_title
+				, board_contents, board_view, create_date, board_status
+				, row_number() over (order by create_date desc) rn
+			from
+				board
+			where
+				user_id = #{userId}
+			and
+				board_category = 'QNA'
+			and
+				board_status = 'E'
+			)
+		where
+			rn >= #{beginIndex}
+		and
+			rn &lt;= #{endIndex}
+		order by
+			create_date desc
+	</select>
+	
+	<!-- 해당 사용자가 몇 개의 글을 작성했는지 알아보는 기능 -->
+	<select id="listCnt" parameterType="string" resultType="int">
+		select count(*)
+		from board
+		where
+			user_id = #{value}
+		and
+			board_category = 'QNA'
+		and
+			board_status = 'E'
+	</select>
+
+	<!-- qna detail을 받아오는 기능 -->
+	<select id="getQnaByNo" parameterType="int" resultType="BoardForm">
+		select 
+			board_no 			as "no"
+			,	user_id			as userId
+			,	board_category	as "category"
+			,	board_title		as title
+			,	board_contents	as "contents"
+			,	board_view		as "view"
+			,	create_date		as createDate
+			,	board_status	as status
+		from
+			board
+		where
+			board_no = #{value}
+	</select>
+	
+	<!-- 새 qna를 저장하는 기능 -->
+	<insert id="addNewQna" parameterType="BoardForm">
+		insert into board
+			(board_no, user_id, board_category, board_title, board_contents)
+		values
+			(board_seq.nextval, #{userId}, 'QNA', #{title}, #{contents})
+	</insert>
+	
+	<!-- board_no에 따른 댓글을 불러오는 기능 -->
+	<select id="getReplyByBoardNo" parameterType="int" resultType="Reply">
+		select
+			no					as boardNo
+			,	rep_no			as repNo
+			,	rep_category	as "category"
+			,	user_id			as userId
+			,	rep_contents	as "contents"
+			,	rep_status		as status
+			,	create_date		as createDate
+		from
+			reply
+		where
+			no = #{value}
+	</select>
+	
+	<!-- board의 status를 D로 변경한다 -->
+	<update id="delBoardByNo" parameterType="int">
+		update board
+		set
+			board_status = 'D'
+		where
+			board_no = #{value}
+	</update>
+	
+	<!-- board의 내용을 변경한다 -->
+	<update id="updateBoardByNo" parameterType="BoardForm">
+		update board
+		set
+			board_title = #{title},
+			board_contents = #{contents}
+		where
+			board_no = #{no}
+	</update>
+	
+	<!-- view수를 올려준다 -->
+	<update id="plusView" parameterType="int">
+		update board
+		set
+			board_view = board_view+1
+		where
+			board_no = #{value} 
+	</update>
+	
+	<!-- userId를 이용해서 User 정보를 불러오는 기능 -->
+	<select id="getUserByUserId" parameterType="string" resultType="User">
+		select
+			user_id				as id
+			,	user_pwd		as pwd
+			,	user_name		as name
+			,	user_status		as status
+			,	user_email		as email
+			,	user_tel		as tel
+			,	user_profile	as profile
+			,	create_date		as createDate
+		from
+			planner_user
+		where
+			user_id = #{value}
+	</select>
+</mapper>

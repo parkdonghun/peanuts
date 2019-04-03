@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hta.peanuts.dao.AdvertisingDao">
+	<!-- 광고주 관련 기능 -->
+	<!-- 광고주 회원가입 -->
+	<insert id="addAdvertising" parameterType="Advertising">
+		insert into advertising 
+			(advertising_id
+			, advertising_category
+			, advertising_name
+			, advertising_tel
+			, advertising_email
+			, advertising_pwd
+			, advertising_manager
+			, advertising_serial)
+		values 
+			(#{id}, #{category}, #{name}, #{tel}, #{email}, #{pwd}, #{manager}, #{serial})
+	</insert>
+	
+	<!-- id로 광고주 찾기 -->
+	<select id="getAdvertisingById" parameterType="string" resultType="Advertising">
+		select 
+			advertising_id		as id,
+			advertising_category as category,
+			advertising_name	as name,
+			advertising_tel		as tel,
+			advertising_manager	as manager,
+			advertising_email	as email,
+			create_date			as createDate,
+			advertising_pwd		as pwd,
+			advertising_serial	as serial
+		from
+			advertising
+		where
+			advertising_id = #{value}
+	</select>
+	
+	<!-- 광고주 탈퇴 기능 -->
+	<delete id="delAdById" parameterType="string">
+		delete from advertising
+		where advertising_id = #{value}
+	</delete>
+	
+	<!-- 게시판 관련 기능 -->
+	<!-- 해당 광고주의 광고 게시글 모두 가져오기 -->
+	<select id="getAllMyAdBoard" parameterType="string" resultType="AdvertisingBoard">
+		select
+			advertising_no		as no,
+			advertising_title 	as title,
+			advertising_id		as id,
+			advertising_no_pwd	as noPwd,
+			advertising_status	as status,
+			advertising_image	as image,
+			to_char(start_date, 'yyyy-mm-dd')	as startDate,
+			to_char(end_date, 'yyyy-mm-dd')		as endDate,
+			advertising_term	as term,
+			advertising_type 	as "type", 
+			create_date			as createDate
+		from
+			advertising_board
+		where
+			advertising_id = #{value}
+		order by
+			create_date desc
+	</select>
+	
+	<!-- 새로운 광고 게시글 등록 -->
+	<insert id="addAdBoard" parameterType="AdvertisingBoard">
+		insert into advertising_board 
+			(advertising_no
+			, advertising_title
+			, advertising_id
+			, advertising_no_pwd
+			, advertising_image
+			, start_date
+			, end_date
+			, advertising_term
+			, advertising_type)
+		values 
+			(advertising_board_seq.nextval
+			, #{title}, #{id}, #{noPwd}, #{image}
+			, to_date(#{startDate}, 'yyyy-mm-dd'), to_date(#{endDate}, 'yyyy-mm-dd')
+			, #{term}, #{type})
+	</insert>
+	
+	<!-- 게시글 번호로 해당 게시글의 모든 정보 불러오기 -->
+	<select id="getAdBoardByAdNo" parameterType="string" resultType="AdvertisingBoard">
+		select
+			advertising_no		as no,
+			advertising_title 	as title,
+			advertising_id		as id,
+			advertising_no_pwd	as noPwd,
+			advertising_status	as status,
+			advertising_image	as image,
+			to_char(start_date, 'yyyy-mm-dd')	as startDate,
+			to_char(end_date, 'yyyy-mm-dd')		as endDate,
+			advertising_term	as term,
+			advertising_type 	as type, 
+			create_date			as createDate
+		from
+			advertising_board
+		where
+			advertising_no =#{value} 
+		order by
+			advertising_no desc
+	</select>
+	
+	<!-- 게시글 번호로 게시글 수정하는 기능(업데이트) -->
+	<update id="updateAdBoard" parameterType="AdvertisingBoard">
+		update
+			advertising_board
+		set
+			advertising_image = #{image}
+			, advertising_type = #{type} 
+		where
+			advertising_no = #{no}
+	</update>
+	
+	<!-- 게시글 번호로 게시글 삭제하는 기능 -->
+	<delete id="delAdBoard" parameterType="string">
+		delete from advertising_board
+		where advertising_no = #{value}
+	</delete>
+	
+	<!-- 관리자 관련 기능 -->
+	<!-- 모든 광고주 리스트 가져오기 -->
+	<select id="getAllAdvertising" resultType="Advertising">
+		select 
+			advertising_id		as id,
+			advertising_category as category,
+			advertising_name	as name,
+			advertising_tel		as tel,
+			advertising_manager	as manager,
+			advertising_email	as email,
+			create_date			as createDate,
+			advertising_pwd		as pwd,
+			advertising_serial	as serial
+		from
+			advertising
+		order by
+			createDate desc
+	</select>
+	
+	<!-- 아이디, 사업자번호, 카테고리(종류), 이름, 매니저로 광고주 검색하기 -->
+	<select id="searchAdvertising" parameterType="string" resultType="Advertising">
+		select 
+			advertising_id		as id,
+			advertising_category as category,
+			advertising_name	as name,
+			advertising_tel		as tel,
+			advertising_manager	as manager,
+			advertising_email	as email,
+			create_date			as createDate,
+			advertising_pwd		as pwd,
+			advertising_serial	as serial
+		from
+			advertising
+		where
+		(
+			advertising_id like '%'||#{keyword}||'%'
+			or
+			advertising_category like '%'||#{keyword}||'%'
+			or
+			advertising_name like '%'||#{keyword}||'%'
+			or
+			advertising_serial like '%'||#{keyword}||'%'
+			or
+			advertising_manager like '%'||#{keyword}||'%'
+		)
+		order by
+			create_date desc
+	</select>
+	
+	<!-- 게시글 번호로 상태 업데이트하는 기능 -->
+	<update id="updateAdStatus" parameterType="AdvertisingBoard">
+		update
+			advertising_board
+		set
+			advertising_status = #{status}
+		where
+			advertising_no = #{no}	
+	</update>
+	
+	<!-- 모든 광고 게시글을 가져오는 기능 -->
+	<select id="getAllAdBoards" resultType="AdvertisingBoard">
+		select
+			advertising_no		as no,
+			advertising_title 	as title,
+			advertising_id		as id,
+			advertising_no_pwd	as noPwd,
+			advertising_status	as status,
+			advertising_image	as image,
+			to_char(start_date, 'yyyy-mm-dd')	as startDate,
+			to_char(end_date, 'yyyy-mm-dd')		as endDate,
+			advertising_term	as "term",
+			advertising_type 	as "type", 
+			create_date			as createDate
+		from
+			advertising_board		
+		order by
+			advertising_no desc
+	</select>
+	
+	<!-- 광고 게시글 검색기능 -->
+	<select id="searchAdBoard" parameterType="string" resultType="AdvertisingBoard">
+		select
+			advertising_no		as no,
+			advertising_title 	as title,
+			advertising_id		as id,
+			advertising_no_pwd	as noPwd,
+			advertising_status	as status,
+			advertising_image	as image,
+			to_char(start_date, 'yyyy-mm-dd')	as startDate,
+			to_char(end_date, 'yyyy-mm-dd')		as endDate,
+			advertising_term	as "term",
+			advertising_type 	as "type", 
+			create_date			as createDate
+		from
+			advertising_board
+		where
+		(
+			advertising_title like '%'||#{keyword}||'%'
+			or
+			advertising_id like '%'||#{keyword}||'%'
+			or
+			advertising_status like '%'||#{keyword}||'%'
+		)
+		order by
+			advertising_no desc
+	</select>
+</mapper>

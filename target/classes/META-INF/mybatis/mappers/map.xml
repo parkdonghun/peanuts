@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hta.peanuts.dao.MapDao">
+
+	<resultMap type="Location" id="LocationMap">
+		<id property="id" column="location_id" />
+		<result property="code" column="location_code" />
+		<result property="city" column="location_city" />
+		<result property="name" column="location_name" />
+		<result property="lineX" column="line_x" />
+		<result property="lineY" column="line_y" />
+		<result property="weatherId" column="location_weather" />
+	</resultMap>
+	
+	<!-- planner_seq번호 불러오기 -->
+	<select id="getPlanSeq" resultType="int">
+		select planner_seq.nextval
+		from dual
+	</select>
+	
+	<!-- planner_location 삭제하기 -->
+	<delete id="delPlanLocation" parameterType="int">
+		delete from planner_location
+		where plan_no = #{value}
+	</delete>
+	
+	<!-- planner_daily 삭제하기 -->
+	<delete id="delDaily" parameterType="int">
+		delete from planner_daily
+		where plan_no = #{value}
+	</delete>
+		
+	<!-- planner 삭제하기 -->
+	<delete id="delPlanner" parameterType="int">
+		delete from planner
+		where plan_no = #{value}
+	</delete>
+	
+	<!--  새 일정 추가하기 -->
+	<insert id="addNewPlan" parameterType="Planner">
+		insert into planner
+			(plan_no, user_id, plan_title, plan_start, plan_end, plan_member, plan_hashtag)
+		values
+			(#{no}, #{userId}, #{title}, to_date(#{startDate}, 'yyyy-mm-dd'), to_date(#{endDate}, 'yyyy-mm-dd'), #{member}, #{hashTag})
+	</insert>
+	
+	<select id="dailyNum" parameterType="Planner" resultType="int">
+		select
+			(to_date(#{endDate}, 'yyyy-mm-dd') - to_date(#{startDate}, 'yyyy-mm-dd') + 1)
+		from
+			planner
+		where
+			plan_no = ${no}
+	</select>
+	
+	<!-- daily 생성하기 -->
+	<insert id="addNewDaily" parameterType="Daily">
+		insert into planner_daily
+			(plan_no, daily_key, daily_index, daily_date)
+		values
+			(#{planNo}, daily_seq.nextval, #{index}, #{date})
+	</insert>
+	
+	<select id="getPlannerByNo" parameterType="int" resultType="Planner">
+		select
+			plan_no			as no
+			,	user_id		as userId
+			,	plan_title	as title
+			,	to_char(plan_start, 'yyyy-mm-dd')	as startDate
+			,	to_char(plan_end, 'yyyy-mm-dd')		as endDate
+			,	plan_member	as member
+			,	create_date	as createDate
+			,	plan_status	as status
+			,	plan_open	as open
+			,	plan_hashtag	as hashTag
+		from
+			planner
+		where
+			plan_no = #{value}
+	</select>
+	
+	<!-- 도시명(city)으로 상세정보(name) 불러오기 또는 id로 나머지 정보 불러오기 -->
+	<select id="getLocation" parameterType="Location" resultMap="LocationMap">
+		select
+			location_id, location_code, location_city, location_name, line_x, line_y, location_weather
+		from
+			locations
+		<where>
+			<if test="city != null">
+				location_city = #{city}
+			</if>
+			<if test="id != null">
+				and location_id = #{id}
+			</if>
+		</where>
+	</select>
+	
+	<select id="getLocationById" parameterType="string" resultMap="LocationMap">
+		select
+			location_id, location_code, location_city, location_name, line_x, line_y, location_weather
+		from
+			locations
+		where
+			location_id = #{id} 
+	</select>
+	
+	<!-- planNo에 해당하는 plannerLocation을 저장한다 -->
+	<insert id="addPL" parameterType="PlannerLocationForm">
+		insert into planner_location
+			(plan_no, start_date, end_date, location_id)
+		values
+			(#{planNo}, to_date(#{startDate}, 'yyyy-mm-dd'), to_date(#{endDate}, 'yyyy-mm-dd'), #{locationId})
+	</insert>
+	
+	<!-- planNo에 해당하는 plannerLocation을 모두 불러온다 -->
+	<select id="getPLByPno" parameterType="int" resultType="PlannerLocationForm">
+		select
+			plan_no			as planNo
+			,	to_char(start_date, 'yyyy-mm-dd')	as startDate
+			,	to_char(end_date, 'yyyy-mm-dd')		as endDate
+			,	create_date	as createDate
+			,	location_id	as locationId
+		from
+			planner_location
+		where
+			plan_no = #{value}
+		order by
+			create_date
+	</select>
+	
+	<!-- planNo와 locationId에 해당하는 planner_location을 삭제한다 -->
+	<delete id="delPLByPnoAndLid" parameterType="PlannerLocationForm">
+		delete from planner_location
+		where
+			plan_no = #{planNo}
+		and
+			location_id = #{locationId}
+	</delete>
+	
+	<!-- planner_status를 Y로 업데이트하는 기능 -->
+	<update id="completePlanStatus" parameterType="int">
+		update planner
+		set
+			plan_status = 'Y'
+		where
+			plan_no = #{value}
+	</update>
+	
+	<!-- 여행 루트 설정 완료시 땅콩 5개 혹은 10개 차감시키기 -->
+	<update id="minusPeanuts" parameterType="map">
+		update planner_user
+		set
+			user_peanuts = (user_peanuts - ${peanuts})
+		where
+			user_id = #{id}
+	</update>
+	
+	<!-- plan_open을 설정하는 기능 -->
+	<update id="updatePlanClose" parameterType="int">
+		update planner
+		set
+			plan_open = 'N'
+		where
+			plan_no = #{value}
+	</update>
+	
+</mapper>

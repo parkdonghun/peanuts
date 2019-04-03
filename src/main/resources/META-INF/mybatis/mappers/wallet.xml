@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hta.peanuts.dao.WalletDao">
+
+	<!-- 유저확인 -->
+	<select id="getUserId" parameterType="int" resultType="string">
+		select	user_id
+		from	planner
+		where	plan_no = #{value}
+	</select>
+	
+	<!-- 대쉬보드 비용 -->
+	<select id="dashboardChart" parameterType="int" resultType="Wallet">
+		SELECT 
+			W.WALLET_CATEGORY as category, 
+			SUM(WALLET_MONEY) as money
+		FROM PLANNER_DAILY D, PLANNER_WALLET W
+		WHERE D.DAILY_KEY = W.DAILY_KEY
+		AND D.PLAN_NO = #{value}
+		GROUP BY W.WALLET_CATEGORY
+	</select>
+	
+	<!-- 플래너별 한눈에보기 출력 -->
+	<select id="allWalletByNo" parameterType="int" resultType="Wallet" >
+		SELECT 
+			D.PLAN_NO as planNo,
+			D.DAILY_KEY as daily, 
+			D.DAILY_INDEX as dailyIndex,
+			W.WALLET_TITLE as title,
+			W.WALLET_CATEGORY as category, 
+			W.WALLET_MONEY as money, 
+			W.WALLET_MEMO as memo,
+			W.WALLET_KEY as walletKey,
+			W.WALLET_FRG_KEY as frgKey
+		FROM 
+			PLANNER_DAILY D, PLANNER_WALLET W
+		WHERE 
+			D.DAILY_KEY = W.DAILY_KEY
+		AND 
+			D.PLAN_NO = #{value}
+		order by d.daily_key asc, w.wallet_key
+	</select>
+	<!-- 플래너별 날짜 받아오기 -->
+	<select id="planerDays" parameterType="int" resultType="Daily">
+		select
+			daily_key as "key",
+			daily_index as "index",
+			daily_date as "date"
+		from
+			planner_daily
+		where
+			plan_no = #{value}
+		order by daily_key asc
+	</select>
+	<!-- 플래너별 일별 카테고리별 비용 추가 -->
+	<insert id="addDailyWallet" parameterType="WalletForm">
+		insert into planner_wallet
+		(daily_key, wallet_category, wallet_money, wallet_memo, create_date, wallet_title, wallet_key)
+		values(#{dayIndex}, #{category}, #{money}, #{memo}, sysdate, #{title}, wallet_seq.nextval)	
+	</insert>
+	<!-- 일자별 비용 삭제하기 -->
+	<delete id="deleteWallet" parameterType="int">
+		delete from planner_wallet
+		where wallet_key = #{value}
+	</delete>
+	<!-- 모달에 일자별 비용 불러오기 -->
+	<select id="getByWalletKey" parameterType="int" resultType="Wallet" >
+		select
+			D.PLAN_NO as planNo,
+			D.daily_key as daily, 
+			W.wallet_category as category, 
+			W.wallet_money as money, 
+			W.wallet_memo as memo, 
+			W.create_date as createDate, 
+			W.wallet_title as title, 
+			W.wallet_key as walletKey, 
+			W.wallet_frg_key as frgKey
+		from PLANNER_DAILY D, PLANNER_WALLET W
+		where D.DAILY_KEY = W.DAILY_KEY
+		AND wallet_key = #{value} 
+	</select>
+	<!-- 일자별 수정 업데이트하기 -->
+	<update id="modifygetKeyNo" parameterType="WalletForm">
+		update 	planner_wallet
+		set 	wallet_money = #{money},
+				wallet_memo = #{memo},
+				wallet_title = #{title}
+		where 	wallet_key = #{keyno}
+	</update>
+	
+		
+</mapper>

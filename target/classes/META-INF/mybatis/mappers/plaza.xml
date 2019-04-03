@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hta.peanuts.dao.PlazaDao">
+
+	<!-- 땅콩 증정 -->
+	<insert id="addpeanuts" parameterType="map">
+		update planner_user
+		set
+			user_peanuts = user_peanuts + #{peanuts}
+		where
+			user_id = #{id}
+	</insert>
+	
+	<!-- 광장게시판 게시글 등록 -->
+	<insert id="addPlaza" parameterType="string">
+		INSERT INTO BOARD
+			(board_no, user_id, board_category, board_contents)
+		VALUES
+			(board_seq.nextval, #{id}, 'ALL', #{content})
+	</insert>
+	
+	<!-- 광장게시판 글 10개씩 보기-->
+	<select id="getAllPlaza" parameterType="map" resultType="Plaza">
+		SELECT id, profile, no, content, createDate, likes
+		FROM (SELECT		row_number() over (order by b.create_date desc) as rn,
+							U.USER_ID as id,
+							U.USER_PROFILE as profile, 
+							B.BOARD_NO as no, 
+							B.BOARD_CONTENTS as content, 
+							B.CREATE_DATE as createDate, 
+							L.CNT as likes						
+				FROM BOARD B, PLANNER_USER U, (SELECT NO, COUNT(NO) AS CNT
+												FROM LIKES
+												WHERE LIKES_CATEGORY = 'ALL'
+												GROUP BY NO) L
+				WHERE B.USER_ID = U.USER_ID
+				AND B.BOARD_NO = L.NO(+)
+				AND B.BOARD_CATEGORY = 'ALL'
+				AND B.BOARD_STATUS = 'E'
+				<include refid="search_sql"></include> )
+		WHERE rn >= #{beginIndex} and rn &lt;= #{endIndex}
+	</select>
+	
+	<sql id="search_sql">
+		<if test="keyword == '' and no == 0">
+			order by B.CREATE_DATE desc 
+		</if>
+		<if test="option == 'content' and keyword != '' and no == 0">
+			AND B.BOARD_CONTENTS like '%'||#{keyword}||'%' 
+		</if>
+		<if test="option == 'userId' and keyword != '' and no == 0">
+			AND U.USER_ID like '%'||#{keyword}||'%'	
+		</if>
+		<if test="keyword == '' and no != 0">
+			AND B.BOARD_NO = #{no}
+		</if>
+	</sql> 
+
+	<!-- 페이지 수 -->
+	<select id="plazaCnt" parameterType="map" resultType="int">
+		SELECT COUNT(*) cnt
+		FROM BOARD
+		WHERE BOARD_CATEGORY = 'ALL'
+		AND BOARD_STATUS = 'E'
+		<include refid="cnt_sql"></include>
+	</select>
+	<sql id="cnt_sql">
+		<if test="keyword == ''">
+			order by create_date desc
+		</if>
+		<if test="option == 'content' and keyword != ''">
+			AND BOARD_CONTENTS like '%'||#{keyword}||'%'	
+		</if>
+		<if test="option == 'userId' and keyword != ''">
+			AND USER_ID like '%'||#{keyword}||'%'	
+		</if>
+	</sql>
+	<!-- 광장게시판 인기글 top5 -->
+	<select id="bestPlazalist" resultType="Plaza">
+		select id, profile, no, content, createDate, likes
+		from (SELECT	U.USER_ID as id,
+						U.USER_PROFILE as profile, 
+						B.BOARD_NO as no, 
+						B.BOARD_CONTENTS as content, 
+						B.CREATE_DATE as createDate, 
+						L.CNT as likes
+				FROM BOARD B, PLANNER_USER U, (SELECT NO, COUNT(NO) AS CNT
+												FROM LIKES
+												WHERE LIKES_CATEGORY = 'ALL'
+												GROUP BY NO) L
+				WHERE B.USER_ID = U.USER_ID
+				AND B.BOARD_NO = L.NO(+)
+				AND B.BOARD_CATEGORY = 'ALL'
+				AND B.BOARD_STATUS = 'E'
+				AND L.CNT is not null
+				ORDER BY L.CNT DESC)
+		where rownum &lt;= 5
+	</select>
+	<!-- 광장게시판 최신댓글 top5 -->
+	<select id="newReList" resultType="Reply">
+	select boardNo, repNo, category, userId, profile, contents, status, createDate
+	from(select r.no as boardNo,
+						r.rep_no as repNo, 
+						r.rep_category as category, 
+						r.user_id as userId, 
+						u.user_profile as profile, 
+						r.rep_contents as contents, 
+						r.rep_status as status, 
+						r.create_date as createDate
+				from reply r, planner_user u, board b
+				where r.user_id = u.user_id
+				and r.no = b.board_no
+				and b.BOARD_STATUS = 'E'
+				and r.rep_category = 'ALL'
+				and r.rep_status = 'NORMAL'
+				order by r.create_date desc)
+	where rownum &lt;= 5
+	</select>
+	
+	<!-- 광장게시판 좋아요 개수 불러오기 -->
+	<select id="allLikes" resultType="Likes">
+		select	no as no,
+			 	user_id as userId, 
+			 	create_date createDate
+		from LIKES
+		where likes_category = 'ALL'
+	</select>	
+	
+	<!-- 댓글 조회 -->
+	<select id="getReplyByNo" parameterType="int" resultType="Reply">
+		SELECT 	R.NO as boardNo, 
+				R.REP_NO as repNo, 
+				R.REP_CATEGORY as category, 
+				R.USER_ID as userId, 
+				R.REP_CONTENTS as contents, 
+				R.REP_STATUS as status, 
+				R.CREATE_DATE as createDate,
+				U.USER_PROFILE as profile
+		FROM REPLY R, PLANNER_USER U
+		WHERE R.USER_ID = U.USER_ID
+		AND R.NO = #{value}
+		AND R.REP_CATEGORY = 'ALL'
+		AND R.REP_STATUS in ('REPORT', 'NORMAL')
+		order by R.create_date desc
+	</select>
+	
+	<!-- 댓글등록 -->
+	<insert id="addReply" parameterType="Reply">
+		insert into reply
+		(no, rep_no, rep_category, user_id, rep_contents, rep_status)
+		values
+		(#{boardNo}, reply_seq.nextval, 'ALL', #{userId}, #{contents}, 'NORMAL')	
+	</insert>
+	<!-- 게시글 수정 -->
+	<update id="listModiByNo" parameterType="Plaza">
+		update board
+		set board_contents = #{content}
+		where board_no = #{no}
+	</update>
+	<!-- 게시글 삭제 -->
+	<update id="listDelByNo" parameterType="int">
+		update board
+		set board_status = 'D'
+		where board_no = #{no}
+	</update>
+	<!-- 댓글 수정 -->
+	<update id="reModiByNo" parameterType="Reply">
+		update reply
+		set rep_contents = #{contents}, create_date = sysdate
+		where rep_no = #{repNo}	
+	</update>
+	<!-- 댓글 삭제 -->
+	<update id="reDelByNo" parameterType="int">
+		update reply
+		set rep_status = 'DELETE'
+		where rep_no = #{no}
+	</update>
+	<!-- 좋아요 추가 -->
+	<insert id="addlike" parameterType="Likes">
+		insert into likes
+		(no, user_id, likes_category)
+		values
+		(#{no}, #{userId}, 'ALL')	
+	</insert>
+	<!-- 이중 좋아요 방지 -->
+	<select id="getUserIdLike" parameterType="likes" resultType="int">
+		select count(*)
+		from likes
+		where no = #{no}
+		and user_id = #{userId}
+		and likes_category = 'ALL'
+	</select>
+	<!-- 좋아요 취소 -->
+	<delete id="dellike" parameterType="int">
+		delete 
+		from likes
+		where no = #{value}
+	</delete>
+	<!-- 댓글 신고 업데이트 -->
+	<update id="getByNoReport" parameterType="int">	
+		update reply
+		set rep_status = 'REPORT'
+		where rep_no = #{no}
+	</update>
+	
+</mapper>

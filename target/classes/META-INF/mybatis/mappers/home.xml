@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hta.peanuts.dao.HomeDao">
+	<!-- 메인 인기플래너 TOP4 -->
+	<select id="planTopList" resultType="Planner">
+		SELECT 	PLAN_NO as no, 
+				PLAN_TITLE as title, 
+				USER_ID as userId, 
+				PLAN_START as startDate, 
+				PLAN_END as endDate, 
+				PLAN_MEMBER as member, 
+				PLAN_HASHTAG as hashTag, 
+				CNT as likeCnt
+		FROM (SELECT row_number() over (order by L.CNT DESC ) as rn,
+							P.PLAN_NO,
+							P.PLAN_TITLE,
+							P.USER_ID,
+							P.PLAN_START,
+							P.PLAN_END,
+							P.PLAN_MEMBER,
+							P.PLAN_HASHTAG,
+							L.CNT
+				FROM PLANNER P, (SELECT NO, COUNT(NO) AS CNT
+										FROM LIKES
+										WHERE LIKES_CATEGORY = 'PLANNER'
+										GROUP BY NO) L
+				WHERE  P.PLAN_NO = L.NO(+)
+				AND L.CNT IS NOT NULL
+				AND P.PLAN_STATUS IN ('Y', 'N')
+				AND P.PLAN_OPEN = 'Y')
+				WHERE RN &lt;= 4
+	</select>
+	<!-- 메인 인기 티켓 TOP6 -->
+	<select id="ticketTopList" parameterType="map" resultType="Ticket">
+		select no, name, price, category, images, discountRate, sellingStart, sellingEnd, locationCity
+            from(select no, name, price, category, images, discountRate, sellingStart, sellingEnd, locationCity,row_number() over(order by sum desc) as rn, sum
+                  from(select T.ticket_no no, T.ticket_name name, T.ticket_price price, T.ticket_category category, T.ticket_images images, T.discount_rate discountRate, T.selling_start sellingStart, T.selling_end sellingEnd, T.location_city locationCity,nvl(sum,0) sum
+                        from(select distinct T.ticket_no, T.ticket_name, T.ticket_price, T.ticket_category, T.ticket_images, T.discount_rate, T.selling_start, T.selling_end, T.location_city
+                              from ticket T, (select location_name, location_city
+                                             from locations
+                                             <if test="location == 'seoul'">
+									            where location_city in ('서울특별시','인천광역시','경기도_경기북부','경기도_경기남부')
+									         </if>
+									         <if test="location == 'chungcheong'">
+									            where location_city in ('충청북도','충청남도','전라북도','전라남도','대전광역시')
+									         </if>
+									         <if test="location == 'kangwon'">
+									            where location_city in ('강원도')
+									         </if>
+									         <if test="location == 'kyeongsang'">
+									            where location_city in ('경상북도','경상남도','부산광역시','대구광역시')
+									         </if>
+									         <if test="location == 'jeju'">
+									            where location_city in ('제주특별자치도')
+									         </if>) L
+                              where (L.location_name like '%'||T.location_city||'_%')
+                              or L.location_name = T.location_city
+                              or L.location_city like '%'||T.location_city||'%'
+                              and T.selling_end >= sysdate)  T, (select ticket_no,sum(order_qty) sum
+                                                                     from ticket_order
+                                                                     group by ticket_no) O
+                  where T.ticket_no = O.ticket_no(+)))
+            where rn &lt;= 5
+	</select>
+	<sql id="ticket_sql">
+		<if test="value == 'seoul'">
+            where location_city in ('서울특별시','인천광역시','경기도_경기북부','경기도_경기남부')
+         </if>
+         <if test="value == 'chungcheong'">
+            where location_city in ('충청북도','충청남도','전라북도','전라남도','대전광역시')
+         </if>
+         <if test="value == 'kangwon'">
+            where location_city in ('강원도')
+         </if>
+         <if test="value == 'kyeongsang'">
+            where location_city in ('경상북도','경상남도','부산광역시','대구광역시')
+         </if>
+         <if test="value == 'jeju'">
+            where location_city in ('제주특별자치도')
+         </if>
+	</sql>
+	
+	
+	
+	<select id="getPlannerInfo" parameterType="int" resultType="Planner">
+		select
+			user_id								as userId
+		,	plan_title							as title
+		,	to_char(plan_start, 'yyyy-mm-dd')	as startDate
+		,	to_char(plan_end, 'yyyy-mm-dd')		as endDate
+		,	plan_member							as member
+		,	create_date							as createDate
+		,	plan_status							as status
+		from
+			planner
+		where
+			plan_no = #{value}	
+	</select>
+	
+	<select id="getUserInfo" parameterType="int" resultType="User">
+		select
+			U.user_id			as id
+		,	U.user_status		as status
+		,	U.user_profile		as profile
+		from
+			planner P
+		,	planner_user U
+		where
+			P.user_id = U.user_id
+		and
+			P.plan_no = #{value}	
+	</select>
+	
+	<select id="getPlannerLikes" parameterType="int" resultType="int">
+		select
+			count(*)
+		from
+			Planner P
+		,	Likes L
+		where
+			P.plan_no = L.no
+		and
+			L.likes_category = 'PLANNER'
+		and
+			P.plan_no = #{value}	
+	</select>
+	
+	<select id="getPlannerReply" parameterType="int" resultType="int">
+		select
+			count(*)
+		from
+			Planner P
+		,	Reply R
+		where
+			P.plan_no = R.no
+		and
+			R.rep_category = 'PLANNER'
+		and
+			P.plan_no = #{value}	
+	</select>
+	
+	<update id="modifyPlannerNm" parameterType="map">
+		update planner
+		set
+			plan_title = #{modifyPNm}
+		where
+			plan_no = #{pno}
+	</update>
+	
+	<update id="deletePlanner" parameterType="int">
+		update planner
+		set
+			plan_status = 'D'
+		where
+			plan_no = #{value}
+	</update>
+	
+	<select id="hasLikedPlanner" parameterType="map" resultType="integer">
+		select
+			count(*)
+		from
+			likes
+		where
+			user_id = #{id}
+		and
+			no = #{pno}	
+	</select>
+	
+	<insert id="likePlanner" parameterType="map">
+		insert into likes
+			(no, user_id, likes_category)
+		values
+			(#{pno}, #{id}, 'PLANNER')
+	</insert>
+	
+	<delete id="unlikePlanner" parameterType="map">
+		delete
+			from likes
+		where
+			user_id = #{id}
+		and
+			no = #{pno}	
+	</delete>
+	
+</mapper>

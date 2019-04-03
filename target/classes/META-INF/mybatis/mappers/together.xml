@@ -1,0 +1,423 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hta.peanuts.dao.TogetherDao">
+
+	<select id="getTopBoards" resultType="Board">
+		select
+			B.board_no			as "no"
+		,	B.user_id			as userId
+		,	B.board_category	as category
+		,	B.board_title		as title
+		,	B.board_contents	as "contents"
+		,	B.board_view		as "view"
+		,	B.create_date		as createDate
+		,	B.board_status		as status
+		,	nvl(L.cnt, 0)		as likes
+		from
+			board B, (select no, count(*) as cnt
+					  from likes
+					  where likes_category = 'TOGETHER'
+					  group by no) L
+		where B.board_no in (select board_no
+							from (select board_no, board_view, row_number() over (order by board_view desc) as rn
+					              from board
+								  where board_category = 'TOGETHER'
+								  and create_date >= sysdate - 7
+								  and create_date &lt;= sysdate
+								  and board_status = 'E')
+								where rn &lt;= 3)
+		and B.board_no = L.no(+)		
+	</select>
+
+	<select id="getTogetherBoards" parameterType="map"  resultType="Board">
+		select
+			B.board_no			as "no"
+		,	B.user_id			as "userId"
+		,	B.board_category	as "category"
+		,	B.board_title		as "title"
+		,	B.board_contents	as "contents"
+		,	B.board_view		as "view"
+		,	B.create_date		as "createDate"
+		,	B.board_status		as "status"
+		,	nvl(L.cnt, 0)		as "likes"
+		from
+			board B, (select no, count(*) as cnt
+			     	  from likes 
+					  where likes_category = 'TOGETHER'
+					  group by no) L
+		where
+			B.board_category = 'TOGETHER'
+		and
+			B.board_status = 'E'
+		and
+			B.board_no = L.no(+)
+		<if test="all != null">
+
+		</if>
+		<if test="writer != null">
+			and B.user_id like '%' || #{writer} || '%'
+		</if>
+		<if test="title != null">
+			and B.board_title like '%' || #{title} || '%'
+		</if>
+		<if test="contents != null">
+			and B.board_contents like '%' || #{contents} || '%'
+		</if>
+		<if test="board != null">
+			and (B.board_title like '%' || #{board} || '%'
+				 or B.board_contents like '%' || #{board} || '%')
+		</if>
+		order by
+			B.create_date desc
+	</select>
+	
+	<select id="getTogetherTopJoin" resultType="Board">
+		select 
+			B.board_no			as "no"
+		,	B.user_id			as userId
+		,	B.board_title		as title
+		,	B.board_contents	as "contents"
+		,	B.create_date		as createDate
+		,	nvl(T.cnt, 0)		as together
+		,	U.user_profile		as "profile"		
+		from
+			board B,
+			planner_user U,
+			(select board_no, count(*) as cnt, row_number() over (order by count(*) desc) as rn
+			 from together
+			 group by board_no) T
+		where
+			B.board_no = T.board_no(+)
+		and
+			B.user_id = U.user_id			
+		and
+			B.board_category = 'TOGETHER'
+		and
+			B.board_status = 'E'
+		and
+			B.create_date >= add_months(sysdate, -3)
+		and
+			B.create_date &lt;= sysdate	
+		and
+			T.rn &lt;= 5
+		order
+			by T.rn asc		
+	</select>
+	
+	<select id="getTogetherTopLikes" resultType="Board">
+		select 
+			B.board_no			as "no"
+		,	B.user_id			as userId
+		,	B.board_title		as title
+		,	B.board_contents	as "contents"
+		,	B.create_date		as createDate
+		,	nvl(L.cnt, 0)		as likes
+		,	U.user_profile		as "profile"
+		from
+			board B,
+			planner_user U,
+			(select no, count(*) as cnt, row_number() over (order by count(*) desc) as rn
+			 from likes
+			 where likes_category = 'TOGETHER'
+			 group by no) L
+		where
+			B.board_no = L.no(+)
+		and
+			B.user_id = U.user_id
+		and
+			B.board_category = 'TOGETHER'
+		and
+			B.board_status = 'E'
+		and
+			B.create_date >= add_months(sysdate, -3)
+		and
+			B.create_date &lt;= sysdate	
+		and
+			L.rn &lt;= 5
+		order
+			by L.rn asc	
+	</select>	
+	
+	<select id="getBoardDetail" parameterType="int" resultType="Board">
+		select 
+			B.board_no			as "no"
+		,	B.user_id			as userId
+		,	B.board_title		as title
+		,	B.board_view		as "view"
+		,	B.board_contents	as "contents"
+		,	B.create_date		as createDate
+		,	nvl(L.cnt, 0)		as likes
+		,	nvl(T.cnt, 0)		as "together"
+		from
+			board B,
+			(select no, count(*) as cnt
+			 from likes
+			 where likes_category = 'TOGETHER'
+			 group by no) L,
+			 (select board_no, count(*) as cnt
+			  from together
+			  group by board_no) T
+		where
+			B.board_no = L.no(+)
+		and
+			B.board_no = T.board_no(+)
+		and
+			B.board_category = 'TOGETHER'
+		and
+			B.board_no = #{value}
+		order by
+			B.board_no desc	
+	</select>
+	
+	<select id="getAllJoiner" parameterType="int" resultType="TogetherPart">
+		select
+			T.board_no		as boardNo
+		,	T.user_id		as userId
+		,	T.create_date	as createDate
+		,	U.user_status	as userStatus
+		,	U.user_profile	as "profile"
+		from
+			together T
+		,	planner_user U
+		where
+			T.user_id = U.user_id
+		and
+			T.board_no = #{value}
+		order by
+			T.create_date asc
+	</select>
+
+	<select id="hasJoined" parameterType="map" resultType="int">
+		select 
+			count(*)
+		from
+			board B,
+			together T
+		where	
+			B.board_no = T.board_no(+)
+		and 
+			B.board_category = 'TOGETHER'
+		and
+			B.board_no = #{bno}
+		and
+			T.user_id = #{id}	
+	</select>
+
+	<insert id="joinBoard" parameterType="map">
+		insert into together(board_no, user_id)
+		values (#{bno}, #{id})
+	</insert>
+
+	<delete id="cancelJoinBoard" parameterType="map">
+		delete from together
+		where 
+			board_no = #{bno}
+		and
+			user_id = #{id}
+	</delete>
+
+	<select id="hasLiked" parameterType="map" resultType="int">
+		select 
+			count(*)
+		from
+			board B,
+			likes L
+		where	
+			B.board_no = L.no(+)
+		and 
+			B.board_category = 'TOGETHER'
+		and
+			L.likes_category = 'TOGETHER'
+		and
+			B.board_no = #{bno}
+		and
+			L.user_id = #{id}	
+	</select>
+	
+	<insert id="likeBoard">
+		insert into likes (no, user_id, likes_category)
+		values (#{bno}, #{id}, 'TOGETHER')
+	</insert>
+		
+	<delete id="unLikeBoard" parameterType="map">
+		delete from likes
+		where 
+			no = #{bno}
+		and
+			likes_category = 'TOGETHER'
+		and 
+			user_id = #{id}
+	</delete>
+	
+	<update id="viewBoard" parameterType="int">
+		update board
+		set
+			board_view = board_view + 1
+		where
+			board_no = #{value} 
+		and
+			board_category = 'TOGETHER'
+	</update>
+	
+	<select id="getReplyCnt" parameterType="integer" resultType="integer">
+		select
+			count(*)
+		from
+			reply
+		where
+			rep_category = 'TOGETHER'
+		and
+			rep_status in ('NORMAL', 'REPORT')
+		and
+			no = #{value}
+		group by
+			no   	
+	</select>
+	
+	<select id="getAllReplys" parameterType="int" resultType="Reply">
+		select
+			R.user_id			as userId
+		,	R.rep_no			as repNo
+		,	R.rep_contents		as "contents"
+		,	R.rep_status		as "status"
+		,	R.create_date		as createDate
+		,	U.user_profile		as "profile"
+		from
+			reply R
+		,	planner_user U
+		where
+			R.user_id = U.user_id
+		and
+			R.rep_category = 'TOGETHER'
+		and
+			R.rep_status in ('NORMAL', 'REPORT')
+		and
+			R.no = #{value}
+		order by
+			R.create_date asc 	
+	</select>
+	
+	<update id="addPeanuts" parameterType="map">
+		update planner_user
+		set
+			user_peanuts = user_peanuts + #{peanuts}
+		where
+			user_id = #{id}	
+	</update>
+	
+	<select id="getReplySeq" resultType="int">
+		select
+			reply_seq.nextval
+		from
+			dual
+	</select>
+	
+	<insert id="addReply" parameterType="Reply">
+		insert into reply
+			(no, rep_no, rep_category, user_id, rep_contents)
+		values
+			(#{boardNo}, #{repNo}, 'TOGETHER', #{userId}, #{contents})
+	</insert>
+	
+	<select id="getReply" parameterType="int" resultType="Reply">
+		select
+			R.user_id			as userId
+		,	R.rep_no			as repNo
+		,	R.rep_contents		as "contents"
+		,	R.rep_status		as "status"
+		,	R.create_date		as createDate
+		,	U.user_profile		as "profile"
+		from
+			reply R
+		,	planner_user U
+		where
+			R.user_id = U.user_id
+		and
+			R.rep_category = 'TOGETHER'
+		and
+			R.rep_status in ('NORMAL', 'REPORT')
+		and
+			R.rep_no = #{value}		
+	</select>
+	
+	<update id="modifyReply" parameterType="map">
+		update reply
+		set
+			rep_contents = #{contents}
+		where
+			rep_no = #{repNo}
+		and
+			rep_category = 'TOGETHER'
+	</update>
+	
+	<update id="delReply" parameterType="int">
+		update reply
+		set
+			rep_status = 'DELETE'
+		where
+			rep_no = #{repNo}
+		and
+			rep_category = 'TOGETHER'
+	</update>	
+	
+	<update id="reportReply" parameterType="int">
+		update reply
+		set
+			rep_status = 'REPORT'
+		where
+			rep_no = #{repNo}
+		and
+			rep_category = 'TOGETHER'
+	</update>	
+
+	<insert id="addNewBoard" parameterType="Board">
+		insert into board
+			(board_no, user_id, board_category, board_title, board_contents)
+		values
+			(board_seq.nextval, #{userId}, 'TOGETHER', #{title}, #{contents})	
+	</insert>
+	
+	<update id="modifyBoard" parameterType="Board">
+		update board
+		set
+			board_title = #{title}
+		,	board_contents = #{contents}
+		where
+			board_no = #{no}
+		and
+			board_category = 'TOGETHER'
+	</update>
+	
+	<update id="deleteBoard" parameterType="int">
+		update board
+		set
+			board_status = 'D'
+		where
+			board_no = #{value}
+	</update>
+	
+	<select id="getMyTogethers" parameterType="string" resultType="Together">
+		select
+			B.board_no		as boardNo
+		,	B.board_title	as title
+		,	B.user_id		as userId
+		,	T.create_date	as createDate
+		from
+			board B
+		,	together T
+		where
+			B.board_no = T.board_no
+		and
+			B.board_category = 'TOGETHER'
+		and
+			B.board_status = 'E'
+		and
+			T.user_id = #{value}
+		order by
+			T.create_date desc			
+	</select>
+
+</mapper>

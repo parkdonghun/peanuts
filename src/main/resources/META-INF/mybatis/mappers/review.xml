@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hta.peanuts.dao.ReviewDao">
+	<select id="getTicketReviewAmount" parameterType="int" resultType="int">
+		select 
+			count(*)
+		from
+			ticket_review
+		where
+			ticket_no = #{value}
+		and
+			status = 'Y'
+	</select>
+	
+	<select id="getTicketGradeAverage" parameterType="int" resultType="double">
+		select 
+			avg(ticket_grade)
+		from 
+			ticket_review
+		where 
+			ticket_no = #{value}
+		and
+			status = 'Y'
+	</select>
+	
+	<select id="getTicketReviewAmountGroupByGrade" parameterType="int" resultType="hashmap">
+		select 
+			nvl((sum ( decode(TICKET_GRADE, 1, 1, 0) )/count(*))*100,0) one,
+			nvl((sum ( decode(TICKET_GRADE, 2, 1, 0) )/count(*))*100,0) two,
+			nvl((sum ( decode(TICKET_GRADE, 3, 1, 0) )/count(*))*100,0) three,
+			nvl((sum ( decode(TICKET_GRADE, 4, 1, 0) )/count(*))*100,0) four,
+			nvl((sum ( decode(TICKET_GRADE, 5, 1, 0) )/count(*))*100,0) five
+		from	
+			ticket_review 
+		where
+			ticket_no = #{value}
+		and
+			status = 'Y'
+	</select>
+	
+	<select id="getReviewImagesByTicketNo" parameterType="int" resultType="hashmap">
+				select 
+					I.no no,
+					I.images_name name,
+					I.user_id userId
+				from 
+					ticket_review_images I, ticket_review R
+				where 
+					I.ticket_no = #{value}
+				and
+					I.no = R.review_no
+				and
+					R.status = 'Y'
+	</select>
+	
+	<select id="getAllReviewByTicketNo" parameterType="int" resultType="hashmap">
+		select 
+			R.review_no reviewNo, 
+			R.ticket_no ticketNo, 
+			U.user_id userId,
+			U.user_name userName,
+			R.ticket_grade ticketGrade, 
+			R.review_contents reviewContents, 
+			R.create_date createDate,
+			U.user_profile userProfile
+		from 
+			ticket_review R, planner_user U
+		where 
+			ticket_no = #{value}
+		and 
+			R.user_id = U.user_id
+		and
+			R.status = 'Y'
+		order by R.create_date desc
+	</select>
+	
+	<select id="getBoardSeq" resultType="int">
+		select board_seq.nextval from dual
+	</select>
+	
+	<insert id="addReview" parameterType="Review">
+		insert into ticket_review(review_no, ticket_no, user_id, ticket_grade, review_contents, create_date, status)
+		values(#{reviewNo}, #{ticketNo}, #{userId} , #{ticketGrade}, #{reviewContents}, sysdate, 'Y')
+	</insert>
+	
+	<insert id="addReviewImage" parameterType="hashmap">
+		insert into ticket_review_images(no, user_id, images_name, ticket_no)
+		values(#{reviewNo}, #{userId}, #{imagesName}, #{ticketNo})
+	</insert>
+	
+	<update id="updateReview" parameterType="hashmap">
+		update ticket_review
+		set
+			ticket_grade = #{grade},
+			review_contents = #{contents}
+		where
+			review_no = #{reviewNo}
+	</update>
+	
+	<update id="updateReviewImage" parameterType="hashmap">
+		update ticket_review_images
+		set
+			images_name = #{imageName}
+		where
+			no = #{reviewNo}
+	</update>
+	
+	<select id="getReviewByReviewNo" parameterType="int" resultType="Review">
+		select 
+			review_no reviewNo,
+			ticket_no ticketNo,
+			user_id userId,
+			ticket_grade ticketGrade,
+			review_contents reviewContents,
+			create_date createDate
+		from 
+			ticket_review
+		where 
+			review_no = #{value}
+	</select>
+	
+	<select id="getReviewImageByReviewNo" parameterType="int" resultType="hashmap">
+		select
+			no reviewNo,
+			ticket_no ticketNo,
+			user_id userId,
+			images_name imageName
+		from
+			ticket_review_images
+		where
+			no = #{value}
+	</select>
+	
+	<insert id="addReviewImageByReviewNo" parameterType="hashmap">
+		insert into ticket_review_images(no, user_id, images_name, ticket_no)
+		values(#{reviewNo}, #{userId}, #{imageName}, #{ticketNo})
+	</insert>
+	
+	<update id="deleteReview" parameterType="int">
+		update ticket_review
+		set
+			status = 'N'
+		where
+			review_no = #{value}
+	</update>
+	
+	<select id="getReviewByRange" parameterType="hashmap" resultType="hashmap">
+		select reviewno, ticketno, userid, username, ticketgrade, reviewcontents, createdate, userprofile
+		from (select 
+					row_number() over(order by R.create_date desc) rn, R.review_no reviewNo, R.ticket_no ticketNo, U.user_id userId, U.user_name userName, R.ticket_grade ticketGrade,  R.review_contents reviewContents, R.create_date createDate, U.user_profile userProfile
+				from 
+					ticket_review R, planner_user U
+				where 
+					ticket_no = #{ticketNo}
+				and 
+					R.user_id = U.user_id
+				and
+					R.status = 'Y')
+		where rn >= #{beginIndex}
+		and rn &lt;= #{endIndex}
+	</select>
+	
+	<select id="getReviewCnt" parameterType="int" resultType="int">
+		select count(*)
+		from 
+			ticket_review R, planner_user U
+		where 
+			ticket_no = #{value}
+		and 
+			R.user_id = U.user_id
+		and
+			R.status = 'Y'
+	</select>
+	
+	<select id="getReviewImageCnt" parameterType="int" resultType="int">
+		select 
+		count(*) sum
+		from 
+			ticket_review_images I, ticket_review R
+		where 
+			I.ticket_no = 1
+		and
+			I.no = R.review_no
+		and
+			R.status = 'Y'
+	</select>
+</mapper>

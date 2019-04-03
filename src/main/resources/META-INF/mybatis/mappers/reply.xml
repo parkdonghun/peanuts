@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hta.peanuts.dao.ReplyDao">
+	
+	<!-- 댓글 다 가져오기  -->
+	<select id="getReplyByBoardNo" parameterType="int" resultType="Reply">
+		select	
+			r.no					as no,
+			r.rep_no			as repNo,
+			r.rep_category	as category,
+			r.user_id			as userId,
+			r.rep_contents	as contents,
+			r.rep_status		as status,
+			r.create_date		as createDate,
+			u.user_profile	as profile	
+		from
+			reply r, planner_user u 
+		where
+			r.rep_category = 'PLANNER'
+		and 
+			no = #{value}
+		and 
+			r.user_id = u.user_id
+		order by r.create_date
+	</select>
+	
+	<!-- 게시글 등록 -->
+	<insert id="addBoard" parameterType="Board">
+		insert into
+			board
+		(board_no, user_id, board_category, board_contents, plan_no)
+		values
+			(board_seq.nextval, #{userId}, 'PLANNER', #{contents}, #{planNo})			
+	</insert>
+	
+	<!-- 게시글 조회 -->
+	<select id="getBoardsByPlanNo" parameterType="int" resultType="Board">
+		select
+			b.board_no		as no,
+			b.user_id 		as userId,
+			b.board_category	as category,
+			b.board_title		as title,
+			b.board_contents	as contents,
+			b.board_view		as "view",
+			b.create_date		as createDate,
+			b.board_status	as status,
+			b.plan_no			as planNo,
+			u.user_profile	as profile
+		from
+			board b, planner_user u
+		where
+			board_category = 'PLANNER'
+		and
+			plan_no = #{value}
+		and
+			b.user_id = u.user_id
+		order by b.create_date desc
+	</select>
+	
+	<!-- 댓글 등록 -->
+	<insert id="addReply" parameterType="Reply">
+		insert into	reply
+			(no, rep_no, rep_category, user_id, rep_contents, rep_status)
+		values
+			(#{boardNo}, reply_seq.nextval, #{category}, #{userId}, #{contents}, 'NORMAL')
+	</insert>
+	
+	<!-- 댓글 수정 -->
+	<update id="reModiByNo" parameterType="Reply">
+		update reply
+		set rep_contents = #{contents}
+		where rep_no = #{repNo}	
+	</update>
+	
+	<!-- 댓글 삭제 -->
+	<delete id="reDelByNo" parameterType="int">
+		delete from reply
+		where rep_no = #{no}
+	</delete>
+	
+	<!-- 댓글 신고 -->
+	<update id="reByNoReport" parameterType="Reply">	
+		update reply
+		set rep_status = 'REPORT'
+		where rep_no = #{repNo}
+	</update>
+	
+</mapper>
+
+
+
+

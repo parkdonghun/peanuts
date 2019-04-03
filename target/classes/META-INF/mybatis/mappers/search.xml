@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hta.peanuts.dao.SearchDao">
+
+	<select id="searchPlanners" parameterType="SearchForm" resultType="Planner">
+		select
+		distinct
+			P.plan_no 		as "no"
+		,	P.user_id		as userId
+		,	P.plan_title	as title
+		,	P.plan_start	as startDate
+		, 	p.plan_end		as endDate
+		,	P.plan_member	as "member"
+		,	P.plan_status	as status
+		,	P.plan_open		as "open"
+		,	P.plan_hashtag	as hashTag
+		,	P.create_date	as createDate
+		,	U.user_profile	as "profile.profile"
+		from
+			planner P
+		,	planner_location C
+		,	locations L
+		,	(select plan_no, count(*) as cnt
+		     from planner_daily
+		     group by plan_no) N
+		,	planner_user U
+		where
+			P.plan_no = C.plan_no
+		and
+			C.location_id = L.location_id
+		and
+			P.plan_status = 'Y'
+		and	
+			P.plan_open = 'Y'
+		and
+			P.plan_no = N.plan_no
+		and
+			P.user_id = U.user_id
+			<if test='searchTitle != ""'>
+				and P.plan_title like '%' || #{searchTitle} || '%'
+			</if>
+			<if test='searchId != ""'>
+				and P.user_id like '%' || #{searchId} || '%'
+			</if>
+			<if test="arrayLocations != null">
+					and L.location_name in
+				<foreach item="item" index="index" open="(" close=")" separator="," collection="arrayLocations">
+					#{item}
+				</foreach>
+			</if>
+			<if test="searchMemebers != null">
+				and P.plan_member = #{searchMemebers}
+			</if>
+			<if test='searchTerm != ""'>
+				and N.cnt = #{searchTerm}
+			</if>
+			<if test="arrayHashtags != null">
+				<foreach item="tag" collection="arrayHashtags">
+					and P.plan_hashtag like '%'|| #{tag} || '%'
+				</foreach>				
+			</if>
+		order by
+			P.plan_no desc
+	</select>
+	
+	<select id="searchUsers" parameterType="java.util.List" resultType="User">
+		select 	
+			user_id 		as	id
+		,	user_pwd 		as	pwd
+		,	user_name 		as	name
+		,	user_status 	as	status
+		,	user_email 		as	email
+		,	user_tel 		as	tel
+		,	user_profile 	as	profile
+		,	create_date 	as	createDate
+		,	user_peanuts 	as	peanuts
+		from 
+			planner_user
+		where 
+			user_id in
+			<foreach item="item" index="index" open="(" separator="," close=")"	collection="list">
+				#{item}
+			</foreach>	
+	</select>
+	
+	<select id="searchLocations" parameterType="int" resultType="string">
+		select
+			L.location_name
+		from
+			planner_location C
+		,	locations L
+		where
+			C.location_id = L.location_id
+		and
+			C.plan_no = #{value}
+		order by
+			C.create_date asc	
+	</select>
+	
+</mapper>

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+  PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-config.dtd">
+  
+  <configuration>
+  
+  	<settings>
+  		<setting name="jdbcTypeForNull" value="NULL" />
+  	</settings>
+  
+  	<typeAliases>
+		<typeAlias type="kr.co.hta.peanuts.vo.AdminDashBoard" alias="AdminDashBoard"/>
+		<typeAlias type="kr.co.hta.peanuts.vo.Advertising" alias="Advertising"/>
+		<typeAlias type="kr.co.hta.peanuts.vo.AdvertisingBoard" alias="AdvertisingBoard"/>
+  		<typeAlias type="kr.co.hta.peanuts.vo.Board" alias="Board"/>
+  		<typeAlias type="kr.co.hta.peanuts.vo.Daily" alias="Daily"/>
+  		<typeAlias type="kr.co.hta.peanuts.vo.DailyHotel" alias="DailyHotel"/>
+  		<typeAlias type="kr.co.hta.peanuts.vo.DailyTour" alias="DailyTour"/>
+  		<typeAlias type="kr.co.hta.peanuts.vo.Images" alias="Images"/>
+  		<typeAlias type="kr.co.hta.peanuts.vo.Likes" alias="Likes"/>
+  		<typeAlias type="kr.co.hta.peanuts.vo.Location" alias="Location"/>
+  		<typeAlias type="kr.co.hta.peanuts.vo.Message" alias="Message"/>
+  		<typeAlias type="kr.co.hta.peanuts.vo.MessageUser" alias="MessageUser"/>
+  		<typeAlias type="kr.co.hta.peanuts.vo.Planner" alias="Planner"/>
+  		<typeAlias type="kr.co.hta.peanuts.vo.PlannerLocation" alias="PlannerLocation"/>
+		<typeAlias type="kr.co.hta.peanuts.vo.Plaza" alias="Plaza"/>
+  		<typeAlias type="kr.co.hta.peanuts.vo.Qna" alias="Qna"/>
+  		<typeAlias type="kr.co.hta.peanuts.vo.Reply" alias="Reply"/>
+  		<typeAlias type="kr.co.hta.peanuts.vo.Review" alias="Review"/>
+  		<typeAlias type="kr.co.hta.peanuts.vo.Ticket" alias="Ticket"/>
+  		<typeAlias type="kr.co.hta.peanuts.vo.Together" alias="Together"/>
+  		<typeAlias type="kr.co.hta.peanuts.vo.TogetherPart" alias="TogetherPart"/>
+		<typeAlias type="kr.co.hta.peanuts.vo.TransLocation" alias="TransLocation"/>  		
+		<typeAlias type="kr.co.hta.peanuts.vo.Transportation" alias="Transportation"/>  		
+  		<typeAlias type="kr.co.hta.peanuts.vo.User" alias="User"/>
+  		<typeAlias type="kr.co.hta.peanuts.vo.Wallet" alias="Wallet"/>
+  		<typeAlias type="kr.co.hta.peanuts.web.form.BoardForm" alias="BoardForm"/>
+  		<typeAlias type="kr.co.hta.peanuts.web.form.PlannerLocationForm" alias="PlannerLocationForm"/>
+  		<typeAlias type="kr.co.hta.peanuts.web.form.SearchForm" alias="SearchForm"/>
+  		<typeAlias type="kr.co.hta.peanuts.web.form.WalletForm" alias="WalletForm"/>
+  	</typeAliases>
+	
+  </configuration>
+  
+  

@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hta.peanuts.dao.QnaDao">
+
+	<select id="getAllQna" parameterType="hashmap" resultType="hashmap">
+		select qnaNo, ticketNo, "user.id", "user.name", "user.profile", questioncontents,  questiondate, answercontents, answerdate
+		from(select 	
+					row_number() over(order by Q.qna_q_date desc) rn,
+					Q.qna_no qnaNo, 
+					Q.ticket_no ticketNo,
+					U.user_id "user.id",
+					U.user_name "user.name",
+					U.user_profile "user.profile", 
+					Q.qna_q_contents questionContents, 
+					Q.qna_q_date questionDate, 
+					Q.qna_a_contents answerContents, 
+					Q.qna_a_date answerDate
+				from 
+					ticket_qna Q, planner_user U
+				where 
+					Q.user_id = U.user_id
+				and 
+					Q.ticket_no = #{ticketNo}
+				and
+					Q.status = 'Y')
+		where rn >= #{beginIndex}
+		and rn &lt;= #{endIndex}
+	</select>
+	
+	<insert id="addQna" parameterType="Qna">
+		insert into ticket_qna (qna_no, ticket_no, user_id, qna_q_contents, qna_q_date, status)
+		values (qna_seq.nextval, #{ticketNo}, #{user.id}, #{questionContents}, sysdate, 'Y')
+	</insert>
+	
+	<update id="addQnaAnswer" parameterType="Qna">
+		update
+			ticket_qna
+		set
+			qna_a_contents = '${answerContents}',
+			qna_a_date = sysdate
+		where
+			qna_no = #{qnaNo}
+	</update>
+	
+	<update id="deleteQna" parameterType="int">
+		update
+			ticket_qna
+		set
+			status = 'N'
+		where
+			qna_no = #{value}
+	</update>
+	
+	<select id="getAllQnaCnt" parameterType="int" resultType="int">
+		select 	count(*)
+		from 
+				ticket_qna Q, planner_user U
+		where 
+				Q.user_id = U.user_id
+		and 
+				Q.ticket_no = #{value}
+		and
+				Q.status = 'Y'
+	</select>
+	
+	<select id="getQnaByNo" parameterType="int" resultType="hashmap">
+		select
+			Q.qna_no qnaNo, 
+			Q.ticket_no ticketNo,
+			U.user_id "user.id",
+			U.user_name "user.name", 
+			Q.qna_q_contents questionContents, 
+			Q.qna_q_date questionDate, 
+			Q.qna_a_contents answerContents, 
+			Q.qna_a_date answerDate
+		from 
+			ticket_qna Q, planner_user U
+		where 
+			Q.user_id = U.user_id
+		and 
+			Q.qna_no = #{value}
+		and
+			Q.status = 'Y'
+	</select>
+	
+	<update id="deleteQnaAnswer" parameterType="Qna">
+		update
+			ticket_qna
+		set
+			qna_a_contents = '',
+			qna_a_date = ''
+		where
+			qna_no = #{qnaNo}
+	</update>
+
+</mapper>
